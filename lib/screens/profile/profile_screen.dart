@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
@@ -23,7 +23,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   List<String> _selectedBodyAreas = [];
   bool _isEditing = false;
   bool _isSaving = false;
-  File? _imageFile;
+  Uint8List? _imageBytes;
+  String? _imageFileName;
 
   static const List<String> _bodyAreas = [
     'shoulder',
@@ -68,11 +69,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
-    final XFile? picked =
-        await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+    final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
     if (picked != null) {
+      final bytes = await picked.readAsBytes();
       setState(() {
-        _imageFile = File(picked.path);
+        _imageBytes = bytes;
+        _imageFileName = picked.name;
       });
     }
   }
@@ -98,11 +100,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       String? photoUrl;
 
-      if (_imageFile != null) {
-        final ref = FirebaseStorage.instance
-            .ref()
-            .child('profile_photos/$uid');
-        await ref.putFile(_imageFile!);
+      if (_imageBytes != null) {
+        final ref = FirebaseStorage.instance.ref('profile_photos/$uid');
+        await ref.putData(_imageBytes!, SettableMetadata(contentType: 'image/jpeg'));
         photoUrl = await ref.getDownloadURL();
       }
 
@@ -196,12 +196,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         CircleAvatar(
                           radius: 50,
                           backgroundColor: const Color(0xFF00897B),
-                          backgroundImage: _imageFile != null
-                              ? FileImage(_imageFile!) as ImageProvider
+                          backgroundImage: _imageBytes != null
+                              ? MemoryImage(_imageBytes!) as ImageProvider
                               : (photoUrl != null
                                   ? NetworkImage(photoUrl) as ImageProvider
                                   : null),
-                          child: (_imageFile == null && photoUrl == null)
+                          child: (_imageBytes == null && photoUrl == null)
                               ? Text(
                                   name.isNotEmpty
                                       ? name[0].toUpperCase()
