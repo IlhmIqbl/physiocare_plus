@@ -1,51 +1,85 @@
 # PhysioCare+
 
-A mobile-based self-guided physiotherapy application that helps users perform safe and effective recovery exercises at home.
+A cross-platform home physiotherapy management app built with Flutter and Firebase. Helps patients manage exercise programmes, track recovery progress, and stay accountable through streaks and smart reminders.
 
-Built with Flutter (cross-platform iOS & Android), Firebase Auth, Cloud Firestore, and Firebase Storage.
+Built with Flutter 3.x, Firebase Auth, Cloud Firestore, Firebase Storage, and Firebase Cloud Functions.
 
 ---
 
-## Project Phases
+## Project Status
 
-### Phase 1 — Foundation & Auth
-- Firebase project setup (Auth + Firestore)
-- `pubspec.yaml` with all dependencies
-- App theme (teal palette), routing, constants
-- Splash screen → auth check → redirect
+| Phase | Description | Status |
+|-------|-------------|--------|
+| Phase 1 | Foundation, auth, all core screens | ✅ Complete |
+| Phase 1 patch | Android config, Firebase wiring, build fixes | ✅ Complete |
+| Phase 2 | Push notifications (FCM), onboarding flow, admin CRUD | 🔄 In Progress |
+
+---
+
+## Phase 1 — Complete ✅
+
+### Foundation & Auth
+- Firebase project setup (Auth + Firestore + Storage)
+- App theme (teal `#00897B` palette), routing, constants
+- Splash screen → onboarding gate → auth check → redirect
 - Login screen (email/password + Google Sign-In)
-- Registration screen
-- User model + Firestore user document creation
+- Registration screen with Firestore user doc creation
 
-### Phase 2 — Core User Experience
-- Dashboard screen (greeting, today's plan, quick stats)
-- Exercise Library (browsable by body area, difficulty, pain type)
-- Exercise Detail screen (description, video, duration)
-- Exercise Session screen (video player, timer, rest intervals, pause/resume)
-- Pain Level logging (after session completion)
+### Core User Experience
+- Dashboard (greeting, streak, weekly sessions, avg pain reduction, active plan)
+- Exercise Library (Firestore-backed, filter by body area + difficulty)
+- Exercise Detail screen (description, video, steps)
+- Exercise Session screen (video, timer, 30s rest intervals, pause/resume)
+- Pain Level logging after session completion
 
-### Phase 3 — Progress & Recovery Plans
-- Personalized recovery plan (generated from pain area + severity input)
-- Plan History screen
-- Progress Tracking dashboard (charts: pain over time, sessions completed)
+### Progress & Recovery Plans
+- Personalized recovery plan (body area + severity → Firestore plan doc)
+- Plan History screen with delete
+- Progress Tracking (streak banner, pain trend line chart, weekly sessions bar chart)
+- Premium-gated advanced analytics (best streak, total time, most frequent exercise)
 
-### Phase 4 — Notifications & Subscription
-- Local notifications / reminders for scheduled sessions
-- Subscription model (Freemium vs Premium)
-- Premium feature gates: advanced analytics, export report, therapist tips, smart reminders
+### Notifications & Subscription
+- Local notifications + Android permissions configured
+- Subscription screen (Freemium vs Premium, RM 9.90/month upgrade flow)
+- Premium feature gates via `PremiumBadge` widget
 
-### Phase 5 — Admin Panel
-- Admin dashboard (usage stats)
-- Manage Users (view/edit/delete)
-- Manage Exercises (full CRUD + video URL management)
-- Manage Recovery Plans
-- Manage Subscriptions
+### Admin Dashboard
+- System stats (users, sessions, subscriptions, exercises)
+- Exercise seeder (6 sample exercises: shoulder, back, knee, hip, neck, ankle)
 
-### Phase 6 — Polish & Hardening
-- User profile & settings screen
-- Offline caching of exercise content
-- Input validation, error states, empty states
-- Final UI polish + performance pass
+### Profile
+- Photo upload (web-compatible `putData` + `MemoryImage`)
+- Body focus area selection, pain severity slider
+
+### Build
+- Web (`flutter build web --release`) ✅
+- Android APK (`flutter build apk --debug`) ✅
+- 6 passing widget tests (PainSlider, SessionTimer, PremiumBadge)
+
+---
+
+## Phase 2 — In Progress 🔄
+
+Design spec: `docs/superpowers/specs/2026-04-27-phase2-design.md`
+
+### Push Notifications (Hybrid FCM + Local)
+- `firebase_messaging` for FCM token registration
+- Cloud Functions (TypeScript) for event-driven pushes:
+  - `onSessionComplete` — streak milestone congratulations (7, 14, 30 days)
+  - `checkDailyStreak` — daily 18:00 cron for streak-at-risk alerts
+  - `onNewPlan` — notify user when a new recovery plan is assigned
+- Local notifications for user-scheduled daily reminders
+- `reminders_screen.dart` wired with per-category toggles + time picker
+
+### Onboarding Flow
+- 4-step first-run wizard: Welcome → Body Areas → Pain Level → Notifications
+- SharedPreferences gate in splash screen
+- Onboarding data written into Firestore user doc on registration
+
+### Admin Content Management
+- `admin_users_screen.dart` — list all users, change subscription type
+- `admin_exercises_screen.dart` — full exercise CRUD with dynamic steps form
+- `admin_plans_screen.dart` — view/delete all plans, create plan for any user
 
 ---
 
@@ -172,13 +206,100 @@ reminders/{reminderId}
 
 ---
 
+## Setup
+
+### Prerequisites
+- Flutter SDK 3.x, Dart SDK 3.x
+- Firebase CLI (`npm install -g firebase-tools`)
+- Node.js 18+ (for Cloud Functions — Phase 2)
+
+### Install
+
+```bash
+git clone https://github.com/IlhmIqbl/physiocare_plus.git
+cd physiocare_plus
+flutter pub get
+```
+
+### Run
+
+```bash
+flutter run -d chrome          # Web
+flutter run -d android         # Android
+flutter build web --release    # Web release
+flutter build apk --debug      # Android APK
+```
+
+### Seed exercise data
+
+Log in as admin → Admin Dashboard → tap **"Seed Sample Exercises"**.
+
+### Cloud Functions (Phase 2)
+
+```bash
+cd functions
+npm install && npm run build
+firebase deploy --only functions
+```
+
+### Firestore security rules
+
+Deploy via Firebase Console → Firestore → Rules:
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    match /exercises/{exerciseId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'admin';
+    }
+    match /sessions/{sessionId} {
+      allow read, write: if request.auth != null &&
+        request.auth.uid == resource.data.userId;
+    }
+    match /recovery_plans/{planId} {
+      allow read, write: if request.auth != null &&
+        request.auth.uid == resource.data.userId;
+    }
+  }
+}
+```
+
+---
+
+## User Roles
+
+| Role | Access |
+|------|--------|
+| `freemium` | Exercise library, basic progress, 1 active plan |
+| `premium` | All features + advanced analytics |
+| `admin` | Admin dashboard, user management, exercise CRUD, plan management |
+
+---
+
+## Known Limitations
+
+- iOS not configured (no `GoogleService-Info.plist`)
+- Payment integration not included — subscription upgrades are admin-controlled
+- Cloud Functions require Firebase Blaze (pay-as-you-go) plan
+- Exercise `videoUrl` fields are placeholders — replace in Firestore with real hosted video links
+
+---
+
 ## Dependencies
 
 ```yaml
 dependencies:
   firebase_core
   firebase_auth
+  firebase_messaging        # Phase 2
   cloud_firestore
+  firebase_storage
   google_sign_in
   provider
   video_player
@@ -187,10 +308,8 @@ dependencies:
   flutter_local_notifications
   shared_preferences
   image_picker
-  firebase_storage
+  cached_network_image
   intl
-  uuid
-  url_launcher
 ```
 
 ---
