@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:physiocare/services/firestore_service.dart';
 import 'package:physiocare/utils/app_constants.dart';
+import 'package:physiocare/utils/exercise_seeder.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -168,6 +169,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           ),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.upload),
+                        label: const Text('Seed Sample Exercises'),
+                        onPressed: () async {
+                          await ExerciseSeeder.seed();
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('6 sample exercises added!')),
+                            );
+                            _loadStats();
+                          }
+                        },
+                      ),
                     ),
                     const SizedBox(height: 24),
                   ],
