@@ -1,30 +1,103 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:physiocare/main.dart';
+import 'package:physiocare/utils/app_theme.dart';
+import 'package:physiocare/widgets/pain_slider.dart';
+import 'package:physiocare/widgets/session_timer.dart';
+import 'package:physiocare/widgets/premium_badge.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  group('PainSlider', () {
+    testWidgets('renders with correct label and value', (tester) async {
+      double currentValue = 5.0;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: Scaffold(
+            body: StatefulBuilder(
+              builder: (context, setState) => PainSlider(
+                value: currentValue,
+                onChanged: (v) => setState(() => currentValue = v),
+                label: 'Test Pain',
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(find.text('Test Pain'), findsOneWidget);
+      expect(find.text('5/10'), findsOneWidget);
+    });
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    testWidgets('displays Mild label at low end', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: PainSlider(value: 1.0, onChanged: (_) {}),
+          ),
+        ),
+      );
+      expect(find.textContaining('Mild'), findsOneWidget);
+    });
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+  group('SessionTimer', () {
+    testWidgets('displays formatted time correctly', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: SessionTimer(secondsRemaining: 90, totalSeconds: 300),
+          ),
+        ),
+      );
+      expect(find.text('01:30'), findsOneWidget);
+    });
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    testWidgets('displays 00:00 when time runs out', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: SessionTimer(secondsRemaining: 0, totalSeconds: 300),
+          ),
+        ),
+      );
+      expect(find.text('00:00'), findsOneWidget);
+    });
+  });
+
+  group('PremiumBadge', () {
+    testWidgets('shows child directly when isPremium', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: PremiumBadge(
+              isPremium: true,
+              child: Text('Premium Content'),
+            ),
+          ),
+        ),
+      );
+      expect(find.text('Premium Content'), findsOneWidget);
+      expect(find.text('Premium Feature'), findsNothing);
+    });
+
+    testWidgets('shows lock overlay when not isPremium', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 300,
+                height: 200,
+                child: PremiumBadge(
+                  isPremium: false,
+                  child: Text('Locked Content'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(find.text('Premium Feature'), findsOneWidget);
+      expect(find.text('Upgrade to unlock'), findsOneWidget);
+    });
   });
 }
