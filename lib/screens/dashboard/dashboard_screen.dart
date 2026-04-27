@@ -5,6 +5,9 @@ import 'package:physiocare/providers/plan_provider.dart';
 import 'package:physiocare/providers/progress_provider.dart';
 import 'package:physiocare/providers/exercise_provider.dart';
 import 'package:physiocare/utils/app_constants.dart';
+import 'package:physiocare/screens/exercises/exercise_library_screen.dart';
+import 'package:physiocare/screens/progress/progress_screen.dart';
+import 'package:physiocare/screens/profile/profile_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -85,11 +88,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
       case 0:
         return _buildHomeTab();
       case 1:
-        return const Center(child: Text('Exercises'));
+        return const ExerciseLibraryScreen();
       case 2:
-        return const Center(child: Text('Progress'));
+        return const ProgressScreen();
       case 3:
-        return const Center(child: Text('Profile'));
+        return const ProfileScreen();
       default:
         return _buildHomeTab();
     }
