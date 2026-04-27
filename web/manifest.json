@@ -1,11 +1,11 @@
 {
-    "name": "physiocare",
-    "short_name": "physiocare",
+    "name": "PhysioCare+",
+    "short_name": "PhysioCare+",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "PhysioCare - Physiotherapy Management App",
+    "background_color": "#004D40",
+    "theme_color": "#00897B",
+    "description": "Your Home Physiotherapy Companion",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
