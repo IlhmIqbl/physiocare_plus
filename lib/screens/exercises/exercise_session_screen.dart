@@ -40,18 +40,31 @@ class _ExerciseSessionScreenState extends State<ExerciseSessionScreen> {
 
   void _startTimer() {
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!mounted) {
+      if (_secondsRemaining > 0) {
+        setState(() => _secondsRemaining--);
+      } else {
         timer.cancel();
-        return;
-      }
-      setState(() {
-        if (_secondsRemaining > 0) {
-          _secondsRemaining--;
+        if (!_isResting) {
+          setState(() {
+            _isResting = true;
+            _restSeconds = 30;
+          });
+          _startRestTimer();
         } else {
-          timer.cancel();
           _completeSession();
         }
-      });
+      }
+    });
+  }
+
+  void _startRestTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_restSeconds > 0) {
+        setState(() => _restSeconds--);
+      } else {
+        timer.cancel();
+        _completeSession();
+      }
     });
   }
 
