@@ -1,0 +1,91 @@
+<h2>Which navigation pattern do you prefer?</h2>
+<p class="subtitle">How users move between the main sections of PhysioCare+</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#f0f9f6;padding:12px;border-radius:8px;font-family:sans-serif;position:relative">
+      <div style="background:#00897B;color:white;padding:8px 12px;border-radius:8px 8px 0 0;font-weight:bold;font-size:13px">PhysioCare+</div>
+      <div style="background:white;min-height:110px;padding:10px;font-size:11px;color:#555;border:1px solid #e0e0e0">
+        <div style="color:#00897B;font-weight:600;margin-bottom:6px">Dashboard content here...</div>
+        <div style="background:#e0f2f1;border-radius:4px;height:20px;margin-bottom:4px"></div>
+        <div style="background:#e0f2f1;border-radius:4px;height:20px;margin-bottom:4px"></div>
+        <div style="background:#e0f2f1;border-radius:4px;height:20px"></div>
+      </div>
+      <div style="background:white;border-top:1px solid #ddd;display:flex;justify-content:space-around;padding:8px 0;border-radius:0 0 8px 8px">
+        <div style="text-align:center">
+          <div style="font-size:16px">🏠</div>
+          <div style="font-size:9px;color:#00897B;font-weight:600">Home</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:16px">💪</div>
+          <div style="font-size:9px;color:#aaa">Exercises</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:16px">📊</div>
+          <div style="font-size:9px;color:#aaa">Progress</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:16px">👤</div>
+          <div style="font-size:9px;color:#aaa">Profile</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Bottom Navigation Bar</h3>
+      <p>4 tabs always visible: Home, Exercises, Progress, Profile. Most common mobile pattern — thumb-friendly, instant switching.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#f0f9f6;padding:12px;border-radius:8px;font-family:sans-serif">
+      <div style="display:flex;gap:0;border-radius:8px;overflow:hidden">
+        <div style="background:#004D40;color:white;padding:10px 8px;min-width:72px;font-size:10px">
+          <div style="font-weight:bold;margin-bottom:10px;font-size:11px">☰ Menu</div>
+          <div style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:4px">🏠 Home</div>
+          <div style="padding:4px 0;color:#b2dfdb">💪 Exercises</div>
+          <div style="padding:4px 0;color:#b2dfdb">📊 Progress</div>
+          <div style="padding:4px 0;color:#b2dfdb">🔔 Reminders</div>
+          <div style="padding:4px 0;color:#b2dfdb">⭐ Premium</div>
+          <div style="padding:4px 0;color:#b2dfdb">👤 Profile</div>
+        </div>
+        <div style="flex:1;background:white;padding:8px;font-size:10px;color:#555">
+          <div style="color:#00897B;font-weight:600;margin-bottom:6px">Dashboard</div>
+          <div style="background:#e0f2f1;border-radius:4px;height:18px;margin-bottom:4px"></div>
+          <div style="background:#e0f2f1;border-radius:4px;height:18px;margin-bottom:4px"></div>
+          <div style="background:#e0f2f1;border-radius:4px;height:18px"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Side Drawer</h3>
+      <p>Hamburger menu slides in from the left. Fits more items (Reminders, Premium, Admin). Hides navigation until needed.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#f0f9f6;padding:12px;border-radius:8px;font-family:sans-serif">
+      <div style="background:#00897B;color:white;padding:8px 12px;border-radius:8px 8px 0 0;font-weight:bold;font-size:13px;display:flex;justify-content:space-between;align-items:center">
+        <span>PhysioCare+</span><span style="font-size:11px">☰</span>
+      </div>
+      <div style="background:white;border-bottom:2px solid #e0e0e0;display:flex">
+        <div style="padding:8px 10px;font-size:10px;color:#00897B;border-bottom:2px solid #00897B;font-weight:600">Home</div>
+        <div style="padding:8px 10px;font-size:10px;color:#aaa">Exercises</div>
+        <div style="padding:8px 10px;font-size:10px;color:#aaa">Progress</div>
+        <div style="padding:8px 10px;font-size:10px;color:#aaa">Profile</div>
+      </div>
+      <div style="background:white;min-height:90px;padding:10px;font-size:11px;color:#555;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px">
+        <div style="background:#e0f2f1;border-radius:4px;height:18px;margin-bottom:4px"></div>
+        <div style="background:#e0f2f1;border-radius:4px;height:18px;margin-bottom:4px"></div>
+        <div style="background:#e0f2f1;border-radius:4px;height:18px"></div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — Bottom Nav + Drawer combo</h3>
+      <p>Bottom nav for main 4 sections + hamburger drawer for extras (Admin, Subscription, Settings). Best of both worlds.</p>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top:16px">Click a card to select, then reply in the terminal.</p>

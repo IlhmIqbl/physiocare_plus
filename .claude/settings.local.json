@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Add-Type -AssemblyName System.IO; $bytes = [System.IO.File]::ReadAllBytes\\('c:\\\\Users\\\\user\\\\Downloads\\\\Gek FYP\\\\Final Full Report Physiocare.pdf'\\); $text = [System.Text.Encoding]::ASCII.GetString\\($bytes\\) -replace '[^\\\\x20-\\\\x7E\\\\n]', ' '; $text | Select-String -Pattern '\\\\S.{20,}' | Select-Object -First 100 | ForEach-Object { $_.Line.Trim\\(\\) } | Where-Object { $_.Length -gt 30 })",
+      "Bash(bash *)",
+      "Bash(xargs cat *)",
+      "Bash(flutter pub *)",
+      "Bash(flutter run *)",
+      "Bash(taskkill /F /IM dart.exe)",
+      "Bash(taskkill /F /IM flutter_tools.snapshot)"
+    ]
+  }
+}
