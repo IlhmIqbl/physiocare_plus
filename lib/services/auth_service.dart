@@ -49,6 +49,10 @@ class AuthService {
     return credential;
   }
 
+  Future<void> sendPasswordReset(String email) async {
+    await _auth.sendPasswordResetEmail(email: email.trim());
+  }
+
   Future<void> signOut() async {
     await Future.wait([
       _auth.signOut(),
