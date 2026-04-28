@@ -51,13 +51,19 @@ class AppAuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> register(String email, String password, String name) async {
+  Future<bool> register(String email, String password, String name,
+      {Map<String, dynamic>? onboardingData}) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      await _authService.registerWithEmailPassword(email, password, name);
+      await _authService.registerWithEmailPassword(
+        email,
+        password,
+        name,
+        onboardingData: onboardingData,
+      );
       _isLoading = false;
       notifyListeners();
       return true;

@@ -21,12 +21,13 @@ class AuthService {
   }
 
   Future<UserCredential> registerWithEmailPassword(
-      String email, String password, String name) async {
+      String email, String password, String name,
+      {Map<String, dynamic>? onboardingData}) async {
     final credential = await _auth.createUserWithEmailAndPassword(
       email: email,
       password: password,
     );
-    await _createUserDoc(credential.user!, name);
+    await _createUserDoc(credential.user!, name, onboardingData: onboardingData);
     return credential;
   }
 
@@ -60,7 +61,8 @@ class AuthService {
     ]);
   }
 
-  Future<void> _createUserDoc(User user, String name) async {
+  Future<void> _createUserDoc(User user, String name,
+      {Map<String, dynamic>? onboardingData}) async {
     final now = DateTime.now();
 
     await _firestore.collection('users').doc(user.uid).set(
@@ -69,8 +71,9 @@ class AuthService {
         'email': user.email ?? '',
         'photoUrl': user.photoURL,
         'userType': 'freemium',
-        'bodyFocusAreas': [],
-        'painSeverity': 0,
+        'bodyFocusAreas': onboardingData?['bodyFocusAreas'] ?? [],
+        'painSeverity': onboardingData?['painSeverity'] ?? 0,
+        'notificationPrefs': onboardingData?['notificationPrefs'] ?? {},
         'createdAt': Timestamp.fromDate(now),
       },
       SetOptions(merge: true),
