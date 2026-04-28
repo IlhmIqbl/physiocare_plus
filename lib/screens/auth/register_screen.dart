@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:physiocare/providers/auth_provider.dart';
 import 'package:physiocare/utils/app_constants.dart';
 import 'package:physiocare/utils/validators.dart';
@@ -19,32 +20,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  late AppAuthProvider _authProvider;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AppAuthProvider>().addListener(_onAuthProviderChanged);
-    });
+    _authProvider = context.read<AppAuthProvider>();
+    _authProvider.addListener(_onAuthChanged);
   }
 
-  void _onAuthProviderChanged() {
+  void _onAuthChanged() {
     if (!mounted) return;
-    final provider = context.read<AppAuthProvider>();
-    if (provider.error != null) {
+    if (_authProvider.error != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(provider.error!),
+          content: Text(_authProvider.error!),
           backgroundColor: Colors.red,
         ),
       );
-      provider.clearError();
+      _authProvider.clearError();
     }
   }
 
   @override
   void dispose() {
-    context.read<AppAuthProvider>().removeListener(_onAuthProviderChanged);
+    _authProvider.removeListener(_onAuthChanged);
+    _authProvider.clearError();
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
@@ -54,14 +55,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
-    final provider = context.read<AppAuthProvider>();
-    final success = await provider.register(
+
+    final args = ModalRoute.of(context)?.settings.arguments;
+    Map<String, dynamic>? onboardingData;
+    if (args is Map<String, dynamic>) {
+      onboardingData = args['onboardingData'] as Map<String, dynamic>?;
+    }
+
+    final success = await _authProvider.register(
       _emailController.text.trim(),
       _passwordController.text,
       _nameController.text.trim(),
+      onboardingData: onboardingData,
     );
     if (success && mounted) {
-      Navigator.of(context).pushReplacementNamed(AppRoutes.dashboard);
+      final navigator = Navigator.of(context);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('onboarding_complete', true);
+      navigator.pushReplacementNamed(AppRoutes.dashboard);
     }
   }
 
@@ -133,11 +144,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ? Icons.visibility_outlined
                             : Icons.visibility_off_outlined,
                       ),
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
+                      onPressed: () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
                     ),
                   ),
                   validator: Validators.validatePassword,
@@ -156,11 +164,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ? Icons.visibility_outlined
                             : Icons.visibility_off_outlined,
                       ),
-                      onPressed: () {
-                        setState(() {
-                          _obscureConfirmPassword = !_obscureConfirmPassword;
-                        });
-                      },
+                      onPressed: () => setState(() =>
+                          _obscureConfirmPassword = !_obscureConfirmPassword),
                     ),
                   ),
                   validator: (value) => Validators.validateConfirmPassword(
@@ -195,9 +200,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 16),
                 TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
+                  onPressed: () => Navigator.of(context).pop(),
                   child: const Text(
                     'Already have an account? Sign In',
                     style: TextStyle(color: Color(0xFF00897B)),

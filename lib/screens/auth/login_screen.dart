@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:physiocare/providers/auth_provider.dart';
 import 'package:physiocare/services/auth_service.dart';
 import 'package:physiocare/utils/app_constants.dart';
@@ -58,7 +59,10 @@ class _LoginScreenState extends State<LoginScreen> {
       _passwordController.text,
     );
     if (success && mounted) {
-      Navigator.of(context).pushReplacementNamed(AppRoutes.dashboard);
+      final navigator = Navigator.of(context);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('onboarding_complete', true);
+      navigator.pushReplacementNamed(AppRoutes.dashboard);
     }
   }
 
@@ -66,7 +70,10 @@ class _LoginScreenState extends State<LoginScreen> {
     final provider = context.read<AppAuthProvider>();
     final success = await provider.signInWithGoogle();
     if (success && mounted) {
-      Navigator.of(context).pushReplacementNamed(AppRoutes.dashboard);
+      final navigator = Navigator.of(context);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('onboarding_complete', true);
+      navigator.pushReplacementNamed(AppRoutes.dashboard);
     }
   }
 
