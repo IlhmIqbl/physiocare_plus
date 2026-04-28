@@ -5,6 +5,7 @@ import 'package:physiocare/widgets/pain_slider.dart';
 import 'package:physiocare/widgets/session_timer.dart';
 import 'package:physiocare/widgets/premium_badge.dart';
 import 'package:physiocare/screens/auth/login_screen.dart';
+import 'package:physiocare/screens/onboarding/onboarding_screen.dart';
 import 'package:physiocare/providers/auth_provider.dart';
 import 'package:provider/provider.dart';
 
@@ -72,6 +73,25 @@ void main() {
         ),
       );
       expect(find.text('00:00'), findsOneWidget);
+    });
+  });
+
+  group('OnboardingScreen', () {
+    testWidgets('renders welcome page with correct text', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(home: OnboardingScreen()),
+      );
+      expect(find.text('Welcome to PhysioCare+'), findsOneWidget);
+      expect(find.text('Get Started'), findsOneWidget);
+    });
+
+    testWidgets('Get Started advances to body areas page', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(home: OnboardingScreen()),
+      );
+      await tester.tap(find.text('Get Started'));
+      await tester.pumpAndSettle();
+      expect(find.text('Where are you recovering?'), findsOneWidget);
     });
   });
 
