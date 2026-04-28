@@ -17,34 +17,34 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  // Cache provider reference so it's safe to use in dispose()
+  late AppAuthProvider _authProvider;
 
-  // Bug fix 1: addListener synchronously in initState — no addPostFrameCallback race
   @override
   void initState() {
     super.initState();
-    context.read<AppAuthProvider>().addListener(_onAuthChanged);
+    _authProvider = context.read<AppAuthProvider>();
+    _authProvider.addListener(_onAuthChanged);
   }
 
   void _onAuthChanged() {
     if (!mounted) return;
-    final provider = context.read<AppAuthProvider>();
-    if (provider.error != null) {
+    if (_authProvider.error != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(provider.error!),
+          content: Text(_authProvider.error!),
           backgroundColor: Colors.red,
         ),
       );
-      provider.clearError();
+      _authProvider.clearError();
     }
   }
 
   @override
   void dispose() {
-    final provider = context.read<AppAuthProvider>();
-    provider.removeListener(_onAuthChanged);
-    // Bug fix 3: clear stale error on dispose so it doesn't fire on return
-    provider.clearError();
+    _authProvider.removeListener(_onAuthChanged);
+    // Bug fix 3: clear stale error so it doesn't re-fire when user returns
+    _authProvider.clearError();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();

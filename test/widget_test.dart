@@ -4,6 +4,18 @@ import 'package:physiocare/utils/app_theme.dart';
 import 'package:physiocare/widgets/pain_slider.dart';
 import 'package:physiocare/widgets/session_timer.dart';
 import 'package:physiocare/widgets/premium_badge.dart';
+import 'package:physiocare/screens/auth/login_screen.dart';
+import 'package:physiocare/providers/auth_provider.dart';
+import 'package:provider/provider.dart';
+
+Widget _wrapLoginScreen() {
+  return ChangeNotifierProvider<AppAuthProvider>(
+    create: (_) => AppAuthProvider(),
+    child: const MaterialApp(
+      home: LoginScreen(),
+    ),
+  );
+}
 
 void main() {
   group('PainSlider', () {
@@ -60,6 +72,35 @@ void main() {
         ),
       );
       expect(find.text('00:00'), findsOneWidget);
+    });
+  });
+
+  group('LoginScreen', () {
+    testWidgets('shows PhysioCare+ header text', (tester) async {
+      await tester.pumpWidget(_wrapLoginScreen());
+      await tester.pump();
+      expect(find.text('PhysioCare+'), findsOneWidget);
+    });
+
+    testWidgets('shows email and password fields', (tester) async {
+      await tester.pumpWidget(_wrapLoginScreen());
+      await tester.pump();
+      expect(find.text('Email'), findsOneWidget);
+      expect(find.text('Password'), findsOneWidget);
+    });
+
+    testWidgets('shows Forgot Password button', (tester) async {
+      await tester.pumpWidget(_wrapLoginScreen());
+      await tester.pump();
+      expect(find.text('Forgot Password?'), findsOneWidget);
+    });
+
+    testWidgets('tapping Forgot Password opens bottom sheet', (tester) async {
+      await tester.pumpWidget(_wrapLoginScreen());
+      await tester.pump();
+      await tester.tap(find.text('Forgot Password?'));
+      await tester.pumpAndSettle();
+      expect(find.text('Send Reset Link'), findsOneWidget);
     });
   });
 
