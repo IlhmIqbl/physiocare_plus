@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:physiocare/models/notification_model.dart';
 import 'package:physiocare/providers/auth_provider.dart';
 import 'package:physiocare/services/firestore_service.dart';
@@ -17,6 +18,9 @@ class _RemindersScreenState extends State<RemindersScreen> {
   List<NotificationModel> _reminders = [];
   bool _isLoading = false;
   final NotificationService _notificationService = NotificationService();
+  bool _streakAlerts = true;
+  bool _planUpdates = true;
+  bool _prefsLoading = false;
 
   // Day abbreviation labels (index 0 → Mon = 1, …, index 6 → Sun = 7)
   static const List<String> _dayLabels = [
@@ -31,6 +35,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
     super.initState();
     _notificationService.initialize();
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadReminders());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadNotifPrefs());
   }
 
   // ---------------------------------------------------------------------------
@@ -45,6 +50,43 @@ class _RemindersScreenState extends State<RemindersScreen> {
       if (mounted) setState(() => _reminders = reminders);
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loadNotifPrefs() async {
+    final uid = _uid;
+    if (uid.isEmpty) return;
+    setState(() => _prefsLoading = true);
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      if (doc.exists && mounted) {
+        final prefs = doc.data()?['notificationPrefs'] as Map<String, dynamic>? ?? {};
+        setState(() {
+          _streakAlerts = prefs['streakAlerts'] as bool? ?? true;
+          _planUpdates = prefs['planUpdates'] as bool? ?? true;
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _prefsLoading = false);
+    }
+  }
+
+  Future<void> _saveNotifPref(String key, bool value) async {
+    final uid = _uid;
+    if (uid.isEmpty) return;
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(uid).update({
+        'notificationPrefs.$key': value,
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not save preference: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
     }
   }
 
@@ -160,16 +202,36 @@ class _RemindersScreenState extends State<RemindersScreen> {
         foregroundColor: Colors.white,
         child: const Icon(Icons.add),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _reminders.isEmpty
-              ? _buildEmptyState()
-              : ListView.builder(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: _reminders.length,
-                  itemBuilder: (context, index) =>
-                      _buildReminderCard(_reminders[index]),
-                ),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildNotifPrefsSection(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Text(
+              'Scheduled Reminders',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: Colors.grey.shade600,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _reminders.isEmpty
+                    ? _buildEmptyState()
+                    : ListView.builder(
+                        padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                        itemCount: _reminders.length,
+                        itemBuilder: (context, index) =>
+                            _buildReminderCard(_reminders[index]),
+                      ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -210,6 +272,71 @@ class _RemindersScreenState extends State<RemindersScreen> {
   }
 
   // ---------------------------------------------------------------------------
+  // Push notification preferences section
+  // ---------------------------------------------------------------------------
+  Widget _buildNotifPrefsSection() {
+    return Card(
+      margin: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+              child: Text(
+                'Push Notifications',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.grey.shade600,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+            if (_prefsLoading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+              )
+            else ...[
+              SwitchListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                title: const Text(
+                  'Streak Alerts',
+                  style: TextStyle(fontWeight: FontWeight.w500),
+                ),
+                subtitle: const Text('Get notified on 7, 14, and 30-day streaks'),
+                value: _streakAlerts,
+                activeThumbColor: AppColors.primary,
+                onChanged: (val) {
+                  setState(() => _streakAlerts = val);
+                  _saveNotifPref('streakAlerts', val);
+                },
+              ),
+              SwitchListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                title: const Text(
+                  'Plan Updates',
+                  style: TextStyle(fontWeight: FontWeight.w500),
+                ),
+                subtitle: const Text('Get notified when a new recovery plan is available'),
+                value: _planUpdates,
+                activeThumbColor: AppColors.primary,
+                onChanged: (val) {
+                  setState(() => _planUpdates = val);
+                  _saveNotifPref('planUpdates', val);
+                },
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
   // Reminder card
   // ---------------------------------------------------------------------------
   Widget _buildReminderCard(NotificationModel reminder) {
@@ -242,7 +369,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
           children: [
             Switch(
               value: reminder.isActive,
-              activeColor: AppColors.primary,
+              activeThumbColor: AppColors.primary,
               onChanged: (val) => _toggleReminder(reminder.id, val),
             ),
             IconButton(
