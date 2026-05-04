@@ -4,6 +4,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:physiocare/models/notification_model.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:timezone/timezone.dart' as tz;
 
 class NotificationService {
   final _plugin = FlutterLocalNotificationsPlugin();
@@ -140,5 +141,15 @@ class NotificationService {
         iOS: DarwinNotificationDetails(),
       ),
     );
+  }
+
+  tz.TZDateTime _nextReminderTime({int addDays = 0}) {
+    final now = tz.TZDateTime.now(tz.local);
+    var target = tz.TZDateTime(
+        tz.local, now.year, now.month, now.day + addDays, 18, 0, 0);
+    if (addDays == 0 && target.isBefore(now)) {
+      target = target.add(const Duration(days: 1));
+    }
+    return target;
   }
 }
