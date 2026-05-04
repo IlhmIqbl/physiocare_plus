@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:physiocare/models/session_model.dart';
 import 'package:physiocare/models/progress_model.dart';
 import 'package:physiocare/services/progress_service.dart';
+import 'package:physiocare/services/notification_service.dart';
 
 class ProgressProvider extends ChangeNotifier {
   List<SessionModel> _sessions = [];
   List<ProgressModel> _progressEntries = [];
   int _streak = 0;
   bool _isLoading = false;
+  String? _userId;
 
   final _progressService = ProgressService();
 
@@ -34,6 +36,7 @@ class ProgressProvider extends ChangeNotifier {
   }
 
   Future<void> loadUserProgress(String userId) async {
+    _userId = userId;
     _isLoading = true;
     notifyListeners();
 
@@ -67,6 +70,12 @@ class ProgressProvider extends ChangeNotifier {
       );
     }
     notifyListeners();
+
+    if (_userId != null) {
+      final ns = NotificationService();
+      await ns.checkAndNotifyStreakMilestone(_userId!);
+      await ns.cancelTodayStreakReminder();
+    }
   }
 
   Future<void> saveProgress(ProgressModel progress) async {
