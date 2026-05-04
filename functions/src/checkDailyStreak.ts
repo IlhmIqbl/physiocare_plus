@@ -7,7 +7,7 @@ export const checkDailyStreak = onSchedule('every day 18:00', async () => {
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   const yStart = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
-  const yEnd = new Date(yStart.getTime() + 24 * 60 * 60 * 1000 - 1);
+  const todayMidnight = new Date(yStart.getFullYear(), yStart.getMonth(), yStart.getDate() + 1);
 
   const sends: Promise<void>[] = [];
 
@@ -23,7 +23,7 @@ export const checkDailyStreak = onSchedule('every day 18:00', async () => {
       .collection('sessions')
       .where('userId', '==', userDoc.id)
       .where('completedAt', '>=', admin.firestore.Timestamp.fromDate(yStart))
-      .where('completedAt', '<=', admin.firestore.Timestamp.fromDate(yEnd))
+      .where('completedAt', '<', admin.firestore.Timestamp.fromDate(todayMidnight))
       .limit(1)
       .get();
 
