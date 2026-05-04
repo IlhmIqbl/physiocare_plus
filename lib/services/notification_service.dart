@@ -150,8 +150,8 @@ class NotificationService {
   /// to force tomorrow regardless of the current time.
   tz.TZDateTime _nextReminderTime({int addDays = 0}) {
     final now = tz.TZDateTime.now(tz.local);
-    var target = tz.TZDateTime(
-        tz.local, now.year, now.month, now.day + addDays, 18, 0, 0);
+    var target = tz.TZDateTime(tz.local, now.year, now.month, now.day, 18, 0, 0)
+        .add(Duration(days: addDays));
     if (addDays == 0 && target.isBefore(now)) {
       target = target.add(const Duration(days: 1));
     }
@@ -200,14 +200,18 @@ class NotificationService {
   Future<void> scheduleDailyStreakReminder(String userId) async {
     if (kIsWeb) return;
 
-    final userDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .get();
-    final notifPrefs = userDoc.data()?['notificationPrefs'];
-    if (!(notifPrefs?['streakAlerts'] ?? true)) {
-      await _plugin.cancel(1001);
-      return;
+    try {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+      final notifPrefs = userDoc.data()?['notificationPrefs'];
+      if (!(notifPrefs?['streakAlerts'] ?? true)) {
+        await _plugin.cancel(1001);
+        return;
+      }
+    } catch (_) {
+      // Offline or permission error — proceed with scheduling anyway
     }
 
     final pending = await _plugin.pendingNotificationRequests();
