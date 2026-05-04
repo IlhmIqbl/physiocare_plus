@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:physiocare/models/user_model.dart';
 import 'package:physiocare/services/auth_service.dart';
+import 'package:physiocare/services/notification_service.dart';
 
 class AppAuthProvider extends ChangeNotifier {
   UserModel? _userModel;
@@ -22,6 +23,7 @@ class AppAuthProvider extends ChangeNotifier {
       _authService.authStateChanges.listen((User? user) async {
         if (user != null) {
           _userModel = await _authService.getUserModel(user.uid);
+          NotificationService().initFCM(user.uid).ignore();
         } else {
           _userModel = null;
         }
