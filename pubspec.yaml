@@ -47,6 +47,7 @@ dependencies:
 
   # Notifications
   flutter_local_notifications: ^17.2.2
+  firebase_messaging: ^15.1.0
 
   # Charts and visualization
   fl_chart: ^0.68.0
