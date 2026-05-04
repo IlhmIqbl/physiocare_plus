@@ -9,7 +9,7 @@ import 'package:physiocare/services/progress_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class NotificationService {
-  final _plugin = FlutterLocalNotificationsPlugin();
+  static final _plugin = FlutterLocalNotificationsPlugin();
   static StreamSubscription<RemoteMessage>? _fcmSubscription;
 
   Future<void> initialize() async {
