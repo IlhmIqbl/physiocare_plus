@@ -6,6 +6,7 @@ import 'package:physiocare/models/notification_model.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:physiocare/services/progress_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class NotificationService {
   final _plugin = FlutterLocalNotificationsPlugin();
@@ -162,31 +163,37 @@ class NotificationService {
 
   Future<void> checkAndNotifyStreakMilestone(String userId) async {
     if (kIsWeb) return;
+    try {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+      final notifPrefs = userDoc.data()?['notificationPrefs'];
+      if (!(notifPrefs?['streakAlerts'] ?? true)) return;
 
-    final userDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .get();
-    final notifPrefs = userDoc.data()?['notificationPrefs'];
-    if (!(notifPrefs?['streakAlerts'] ?? true)) return;
+      final streak = await ProgressService().getSessionStreak(userId);
+      if (!isStreakMilestone(streak)) return;
 
-    final streak = await ProgressService().getSessionStreak(userId);
-    if (!isStreakMilestone(streak)) return;
+      final prefs = await SharedPreferences.getInstance();
+      final lastNotified = prefs.getInt('last_milestone_notified_$userId') ?? 0;
+      if (streak <= lastNotified) return;
 
-    await _plugin.show(
-      1002,
-      '🔥 Streak Achievement!',
-      '$streak-day streak! You\'re crushing your recovery.',
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'physiocare_streak',
-          'Streak Reminders',
-          channelDescription: 'Notifications for streak achievements',
-          importance: Importance.high,
-          priority: Priority.high,
+      await _plugin.show(
+        1002,
+        '🔥 Streak Achievement!',
+        '$streak-day streak! You\'re crushing your recovery.',
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'physiocare_streak',
+            'Streak Reminders',
+            channelDescription: 'Notifications for streak achievements',
+            importance: Importance.high,
+            priority: Priority.high,
+          ),
+          iOS: DarwinNotificationDetails(),
         ),
-        iOS: DarwinNotificationDetails(),
-      ),
-    );
+      );
+      await prefs.setInt('last_milestone_notified_$userId', streak);
+    } catch (_) {}
   }
 }
