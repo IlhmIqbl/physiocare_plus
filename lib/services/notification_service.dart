@@ -7,7 +7,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 
 class NotificationService {
   final _plugin = FlutterLocalNotificationsPlugin();
-  StreamSubscription<RemoteMessage>? _fcmSubscription;
+  static StreamSubscription<RemoteMessage>? _fcmSubscription;
 
   Future<void> initialize() async {
     if (kIsWeb) return;
