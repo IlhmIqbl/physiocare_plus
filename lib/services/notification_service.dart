@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -6,6 +7,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 
 class NotificationService {
   final _plugin = FlutterLocalNotificationsPlugin();
+  StreamSubscription<RemoteMessage>? _fcmSubscription;
 
   Future<void> initialize() async {
     if (kIsWeb) return;
@@ -114,7 +116,8 @@ class NotificationService {
           .set({'fcmToken': token}, SetOptions(merge: true));
     }
 
-    FirebaseMessaging.onMessage.listen(handleForegroundMessage);
+    await _fcmSubscription?.cancel();
+    _fcmSubscription = FirebaseMessaging.onMessage.listen(handleForegroundMessage);
   }
 
   Future<void> handleForegroundMessage(RemoteMessage message) async {
