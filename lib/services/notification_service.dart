@@ -196,4 +196,84 @@ class NotificationService {
       await prefs.setInt('last_milestone_notified_$userId', streak);
     } catch (_) {}
   }
+
+  Future<void> scheduleDailyStreakReminder(String userId) async {
+    if (kIsWeb) return;
+
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .get();
+    final notifPrefs = userDoc.data()?['notificationPrefs'];
+    if (!(notifPrefs?['streakAlerts'] ?? true)) {
+      await _plugin.cancel(1001);
+      return;
+    }
+
+    final pending = await _plugin.pendingNotificationRequests();
+    if (pending.any((n) => n.id == 1001)) return;
+
+    await _plugin.zonedSchedule(
+      1001,
+      "Don't break your streak!",
+      'Complete a session today to keep your recovery on track.',
+      _nextReminderTime(),
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'physiocare_streak',
+          'Streak Reminders',
+          channelDescription: 'Daily reminders to maintain your exercise streak',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(),
+      ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+    );
+  }
+
+  Future<void> cancelTodayStreakReminder() async {
+    if (kIsWeb) return;
+    await _plugin.cancel(1001);
+    await _plugin.zonedSchedule(
+      1001,
+      "Don't break your streak!",
+      'Complete a session today to keep your recovery on track.',
+      _nextReminderTime(addDays: 1),
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'physiocare_streak',
+          'Streak Reminders',
+          channelDescription: 'Daily reminders to maintain your exercise streak',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(),
+      ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+    );
+  }
+
+  Future<void> showNewPlanNotification() async {
+    if (kIsWeb) return;
+    await _plugin.show(
+      1003,
+      'New Recovery Plan Available',
+      'Your physiotherapist has created a new plan for you.',
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'physiocare_plans',
+          'Plan Updates',
+          channelDescription: 'Notifications for new recovery plans',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(),
+      ),
+    );
+  }
 }
