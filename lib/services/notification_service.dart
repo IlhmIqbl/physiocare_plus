@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:physiocare/models/notification_model.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:timezone/timezone.dart' as tz;
+import 'package:physiocare/services/progress_service.dart';
 
 class NotificationService {
   final _plugin = FlutterLocalNotificationsPlugin();
@@ -143,6 +144,9 @@ class NotificationService {
     );
   }
 
+  /// Returns the next 18:00 in local time. If today's 18:00 has already
+  /// passed and [addDays] is 0, returns tomorrow's 18:00. Pass [addDays]=1
+  /// to force tomorrow regardless of the current time.
   tz.TZDateTime _nextReminderTime({int addDays = 0}) {
     final now = tz.TZDateTime.now(tz.local);
     var target = tz.TZDateTime(
@@ -151,5 +155,38 @@ class NotificationService {
       target = target.add(const Duration(days: 1));
     }
     return target;
+  }
+
+  static bool isStreakMilestone(int streak) =>
+      streak == 7 || streak == 14 || streak == 30;
+
+  Future<void> checkAndNotifyStreakMilestone(String userId) async {
+    if (kIsWeb) return;
+
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .get();
+    final notifPrefs = userDoc.data()?['notificationPrefs'];
+    if (!(notifPrefs?['streakAlerts'] ?? true)) return;
+
+    final streak = await ProgressService().getSessionStreak(userId);
+    if (!isStreakMilestone(streak)) return;
+
+    await _plugin.show(
+      1002,
+      '🔥 Streak Achievement!',
+      '$streak-day streak! You\'re crushing your recovery.',
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'physiocare_streak',
+          'Streak Reminders',
+          channelDescription: 'Notifications for streak achievements',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(),
+      ),
+    );
   }
 }
