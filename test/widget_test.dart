@@ -6,6 +6,7 @@ import 'package:physiocare/widgets/session_timer.dart';
 import 'package:physiocare/widgets/premium_badge.dart';
 import 'package:physiocare/screens/auth/login_screen.dart';
 import 'package:physiocare/screens/onboarding/onboarding_screen.dart';
+import 'package:physiocare/screens/notifications/reminders_screen.dart';
 import 'package:physiocare/providers/auth_provider.dart';
 import 'package:provider/provider.dart';
 
@@ -14,6 +15,15 @@ Widget _wrapLoginScreen() {
     create: (_) => AppAuthProvider(),
     child: const MaterialApp(
       home: LoginScreen(),
+    ),
+  );
+}
+
+Widget _wrapRemindersScreen() {
+  return ChangeNotifierProvider<AppAuthProvider>(
+    create: (_) => AppAuthProvider(),
+    child: const MaterialApp(
+      home: RemindersScreen(),
     ),
   );
 }
@@ -121,6 +131,21 @@ void main() {
       await tester.tap(find.text('Forgot Password?'));
       await tester.pumpAndSettle();
       expect(find.text('Send Reset Link'), findsOneWidget);
+    });
+  });
+
+  group('RemindersScreen push prefs', () {
+    testWidgets('shows Streak Alerts and Plan Updates toggles', (tester) async {
+      await tester.pumpWidget(_wrapRemindersScreen());
+      await tester.pump();
+      expect(find.text('Streak Alerts'), findsOneWidget);
+      expect(find.text('Plan Updates'), findsOneWidget);
+    });
+
+    testWidgets('shows Push Notifications section header', (tester) async {
+      await tester.pumpWidget(_wrapRemindersScreen());
+      await tester.pump();
+      expect(find.text('Push Notifications'), findsOneWidget);
     });
   });
 
