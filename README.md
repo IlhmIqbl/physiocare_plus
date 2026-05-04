@@ -12,7 +12,7 @@ Built with Flutter 3.x, Firebase Auth, Cloud Firestore, Firebase Storage, and Fi
 |-------|-------------|--------|
 | Phase 1 | Foundation, auth, all core screens | ✅ Complete |
 | Phase 1 patch | Android config, Firebase wiring, build fixes | ✅ Complete |
-| Phase 2 | Push notifications (FCM), onboarding flow, admin CRUD | 🔄 In Progress |
+| Phase 2 | Push notifications (FCM), onboarding flow, admin CRUD | ✅ Complete |
 
 ---
 
@@ -54,11 +54,11 @@ Built with Flutter 3.x, Firebase Auth, Cloud Firestore, Firebase Storage, and Fi
 ### Build
 - Web (`flutter build web --release`) ✅
 - Android APK (`flutter build apk --debug`) ✅
-- 6 passing widget tests (PainSlider, SessionTimer, PremiumBadge)
+- 14 passing widget tests (PainSlider, SessionTimer, PremiumBadge, LoginScreen, OnboardingScreen, RemindersScreen)
 
 ---
 
-## Phase 2 — In Progress 🔄
+## Phase 2 — Complete ✅
 
 Design spec: `docs/superpowers/specs/2026-04-27-phase2-design.md`
 
@@ -107,7 +107,7 @@ lib/
 │   ├── plan_service.dart          # Recovery plan generation logic
 │   ├── progress_service.dart      # Progress + pain tracking
 │   ├── subscription_service.dart
-│   └── notification_service.dart  # flutter_local_notifications
+│   └── notification_service.dart  # flutter_local_notifications + FCM
 │
 ├── providers/
 │   ├── auth_provider.dart
@@ -159,7 +159,8 @@ lib/
 ```
 users/{userId}
   name, email, photoUrl, userType (freemium|premium|admin),
-  createdAt, bodyFocusAreas[], painSeverity (1-10)
+  createdAt, bodyFocusAreas[], painSeverity (1-10),
+  fcmToken, notificationPrefs { dailyReminder, reminderTime, streakAlerts, planUpdates }
 
 exercises/{exerciseId}
   title, description, bodyArea, difficulty (easy|medium|hard),
@@ -202,7 +203,9 @@ reminders/{reminderId}
 
 **Admin:** Users with `userType == 'admin'` see Admin entry in drawer. Full Firestore CRUD on exercises, users, and recoveryPlans collections.
 
-**Notifications:** Reminders screen lets users set days/time → notification_service schedules repeating local notifications.
+**Notifications:** Reminders screen lets users set local reminder schedules (days/time) and toggle FCM push preferences (Streak Alerts, Plan Updates). FCM token is captured on sign-in and saved to Firestore for Cloud Functions to use.
+
+**Onboarding:** First-run 4-step wizard (Welcome → Body Areas → Pain Level → Notification prefs) gated by SharedPreferences flag. Data flows into Firestore user doc on registration.
 
 ---
 
@@ -211,7 +214,7 @@ reminders/{reminderId}
 ### Prerequisites
 - Flutter SDK 3.x, Dart SDK 3.x
 - Firebase CLI (`npm install -g firebase-tools`)
-- Node.js 18+ (for Cloud Functions — Phase 2)
+- Node.js 20 (for Cloud Functions)
 
 ### Install
 
@@ -336,6 +339,7 @@ dependencies:
 | Database | Cloud Firestore |
 | File Storage | Firebase Storage |
 | State Management | Provider |
-| Notifications | flutter_local_notifications |
+| Notifications | flutter_local_notifications + Firebase Cloud Messaging |
+| Cloud Functions | Firebase Functions v2 (TypeScript, Node 20) |
 | Charts | fl_chart |
 | Video Playback | video_player + chewie |
