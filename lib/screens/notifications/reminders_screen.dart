@@ -56,6 +56,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
   Future<void> _loadNotifPrefs() async {
     final uid = _uid;
     if (uid.isEmpty) return;
+    if (!mounted) return;
     setState(() => _prefsLoading = true);
     try {
       final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
@@ -75,9 +76,10 @@ class _RemindersScreenState extends State<RemindersScreen> {
     final uid = _uid;
     if (uid.isEmpty) return;
     try {
-      await FirebaseFirestore.instance.collection('users').doc(uid).update({
-        'notificationPrefs.$key': value,
-      });
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .set({'notificationPrefs': {key: value}}, SetOptions(merge: true));
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
