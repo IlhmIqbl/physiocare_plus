@@ -9,6 +9,7 @@ class UserModel {
   final List<String> bodyFocusAreas;
   final int painSeverity;
   final DateTime createdAt;
+  final String? therapistId;
 
   const UserModel({
     required this.id,
@@ -19,6 +20,7 @@ class UserModel {
     required this.bodyFocusAreas,
     required this.painSeverity,
     required this.createdAt,
+    this.therapistId,
   });
 
   factory UserModel.fromMap(Map<String, dynamic> map, String id) {
@@ -31,6 +33,7 @@ class UserModel {
       bodyFocusAreas: List<String>.from(map['bodyFocusAreas'] ?? []),
       painSeverity: map['painSeverity'] as int,
       createdAt: (map['createdAt'] as Timestamp).toDate(),
+      therapistId: map['therapistId'] as String?,
     );
   }
 
@@ -47,6 +50,7 @@ class UserModel {
       'bodyFocusAreas': bodyFocusAreas,
       'painSeverity': painSeverity,
       'createdAt': Timestamp.fromDate(createdAt),
+      'therapistId': therapistId,
     };
   }
 
@@ -59,6 +63,7 @@ class UserModel {
     List<String>? bodyFocusAreas,
     int? painSeverity,
     DateTime? createdAt,
+    String? therapistId,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -69,6 +74,7 @@ class UserModel {
       bodyFocusAreas: bodyFocusAreas ?? this.bodyFocusAreas,
       painSeverity: painSeverity ?? this.painSeverity,
       createdAt: createdAt ?? this.createdAt,
+      therapistId: therapistId ?? this.therapistId,
     );
   }
 }
