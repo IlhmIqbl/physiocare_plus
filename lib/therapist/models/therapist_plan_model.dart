@@ -16,9 +16,9 @@ class TherapistPlanExercise {
   factory TherapistPlanExercise.fromMap(Map<String, dynamic> map) {
     return TherapistPlanExercise(
       exerciseId: map['exerciseId'] as String,
-      sets: map['sets'] as int,
-      reps: map['reps'] as int,
-      durationSecs: map['durationSecs'] as int,
+      sets: (map['sets'] as int?) ?? 0,
+      reps: (map['reps'] as int?) ?? 0,
+      durationSecs: (map['durationSecs'] as int?) ?? 0,
     );
   }
 
@@ -65,7 +65,7 @@ class TherapistPlanModel {
               TherapistPlanExercise.fromMap(e as Map<String, dynamic>))
           .toList(),
       createdAt: (map['createdAt'] as Timestamp).toDate(),
-      active: map['active'] as bool,
+      active: (map['active'] as bool?) ?? true,
     );
   }
 

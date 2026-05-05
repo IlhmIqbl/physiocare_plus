@@ -30,7 +30,7 @@ class TherapistFeedbackModel {
       sessionId: map['sessionId'] as String?,
       message: map['message'] as String,
       createdAt: (map['createdAt'] as Timestamp).toDate(),
-      readByPatient: map['readByPatient'] as bool,
+      readByPatient: (map['readByPatient'] as bool?) ?? false,
     );
   }
 
