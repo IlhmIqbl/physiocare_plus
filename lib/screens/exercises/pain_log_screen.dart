@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:physiocare/models/exercise_model.dart';
 import 'package:physiocare/models/progress_model.dart';
 import 'package:physiocare/providers/progress_provider.dart';
 import 'package:physiocare/providers/auth_provider.dart';
@@ -36,7 +35,6 @@ class _PainLogScreenState extends State<PainLogScreen> {
     final args =
         ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
     final String sessionId = args['sessionId'] as String;
-    final ExerciseModel exercise = args['exercise'] as ExerciseModel;
 
     return Scaffold(
       appBar: AppBar(

@@ -150,7 +150,7 @@ class _AdminExercisesScreenState extends State<AdminExercisesScreen> {
                                 width: 48,
                                 height: 48,
                                 fit: BoxFit.cover,
-                                errorBuilder: (_, _e, _s) => const Icon(
+                                errorBuilder: (ctx, err, st) => const Icon(
                                     Icons.fitness_center,
                                     size: 40,
                                     color: Colors.teal),

@@ -24,7 +24,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isEditing = false;
   bool _isSaving = false;
   Uint8List? _imageBytes;
-  String? _imageFileName;
 
   static const List<String> _bodyAreas = [
     'shoulder',
@@ -74,7 +73,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final bytes = await picked.readAsBytes();
       setState(() {
         _imageBytes = bytes;
-        _imageFileName = picked.name;
       });
     }
   }
