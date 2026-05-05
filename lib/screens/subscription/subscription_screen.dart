@@ -47,6 +47,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   // Upgrade flow
   // ---------------------------------------------------------------------------
   Future<void> _handleUpgrade(BuildContext context, String uid) async {
+    final subscriptionProvider = context.read<SubscriptionProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -79,9 +82,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     setState(() => _isUpgrading = true);
 
     try {
-      await context.read<SubscriptionProvider>().upgradeToPremium(uid);
+      await subscriptionProvider.upgradeToPremium(uid);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         const SnackBar(
           content: Text('Successfully upgraded to Premium!'),
           backgroundColor: Colors.green,
@@ -89,7 +92,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
           content: Text('Upgrade failed: $e'),
           backgroundColor: AppColors.error,
@@ -282,7 +285,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               final isEven = index % 2 == 0;
               return _buildFeatureDataRow(
                 feature,
-                isEven ? Colors.white : AppColors.surface.withOpacity(0.5),
+                isEven ? Colors.white : AppColors.surface.withValues(alpha: 0.5),
               );
             }),
           ],

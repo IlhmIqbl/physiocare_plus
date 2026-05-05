@@ -150,7 +150,7 @@ class _AdminExercisesScreenState extends State<AdminExercisesScreen> {
                                 width: 48,
                                 height: 48,
                                 fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => const Icon(
+                                errorBuilder: (_, _e, _s) => const Icon(
                                     Icons.fitness_center,
                                     size: 40,
                                     color: Colors.teal),
@@ -406,7 +406,7 @@ class _ExerciseFormSheetState extends State<_ExerciseFormSheet> {
                 children: [
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      value: _bodyArea,
+                      initialValue: _bodyArea,
                       decoration: const InputDecoration(
                         labelText: 'Body Area',
                         border: OutlineInputBorder(),
@@ -425,7 +425,7 @@ class _ExerciseFormSheetState extends State<_ExerciseFormSheet> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      value: _difficulty,
+                      initialValue: _difficulty,
                       decoration: const InputDecoration(
                         labelText: 'Difficulty',
                         border: OutlineInputBorder(),
@@ -475,7 +475,7 @@ class _ExerciseFormSheetState extends State<_ExerciseFormSheet> {
                 title: const Text('Active'),
                 subtitle: const Text('Inactive exercises won\'t appear to users'),
                 value: _isActive,
-                activeColor: Colors.teal,
+                activeThumbColor: Colors.teal,
                 onChanged: (v) => setState(() => _isActive = v),
               ),
               const SizedBox(height: 16),

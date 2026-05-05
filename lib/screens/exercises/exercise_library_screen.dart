@@ -57,7 +57,7 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
                             vertical: 8,
                           ),
                         ),
-                        value: provider.selectedBodyArea,
+                        initialValue: provider.selectedBodyArea,
                         items: [
                           const DropdownMenuItem<String?>(
                             value: null,
@@ -89,7 +89,7 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
                             vertical: 8,
                           ),
                         ),
-                        value: provider.selectedDifficulty,
+                        initialValue: provider.selectedDifficulty,
                         items: [
                           const DropdownMenuItem<String?>(
                             value: null,

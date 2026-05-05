@@ -208,7 +208,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
-                            color: _chipColor(user.userType).withOpacity(0.15),
+                            color: _chipColor(user.userType).withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                                 color: _chipColor(user.userType), width: 1),

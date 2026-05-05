@@ -42,17 +42,17 @@ class PainTrendChart extends StatelessWidget {
             horizontalInterval: 2,
             verticalInterval: 1,
             getDrawingHorizontalLine: (value) => FlLine(
-              color: Colors.grey.withOpacity(0.2),
+              color: Colors.grey.withValues(alpha: 0.2),
               strokeWidth: 1,
             ),
             getDrawingVerticalLine: (value) => FlLine(
-              color: Colors.grey.withOpacity(0.2),
+              color: Colors.grey.withValues(alpha: 0.2),
               strokeWidth: 1,
             ),
           ),
           borderData: FlBorderData(
             show: true,
-            border: Border.all(color: Colors.grey.withOpacity(0.4)),
+            border: Border.all(color: Colors.grey.withValues(alpha: 0.4)),
           ),
           titlesData: FlTitlesData(
             bottomTitles: AxisTitles(
@@ -197,13 +197,13 @@ class WeeklySessionsChart extends StatelessWidget {
             drawVerticalLine: false,
             horizontalInterval: 1,
             getDrawingHorizontalLine: (value) => FlLine(
-              color: Colors.grey.withOpacity(0.2),
+              color: Colors.grey.withValues(alpha: 0.2),
               strokeWidth: 1,
             ),
           ),
           borderData: FlBorderData(
             show: true,
-            border: Border.all(color: Colors.grey.withOpacity(0.4)),
+            border: Border.all(color: Colors.grey.withValues(alpha: 0.4)),
           ),
           titlesData: FlTitlesData(
             bottomTitles: AxisTitles(
