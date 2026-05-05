@@ -44,5 +44,5 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Internal planning docs
-docs/superpowers/
+# Internal planning docs (implementation plans only, not design specs)
+docs/superpowers/plans/
