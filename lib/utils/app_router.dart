@@ -18,6 +18,7 @@ import 'package:physiocare/screens/admin/admin_users_screen.dart';
 import 'package:physiocare/screens/admin/admin_exercises_screen.dart';
 import 'package:physiocare/screens/admin/admin_plans_screen.dart';
 import 'package:physiocare/screens/onboarding/onboarding_screen.dart';
+import 'package:physiocare/therapist/screens/therapist_shell.dart';
 
 class AppRouter {
   AppRouter._();
@@ -130,6 +131,12 @@ class AppRouter {
         return MaterialPageRoute(
           settings: settings,
           builder: (_) => const AdminPlansScreen(),
+        );
+
+      case AppRoutes.therapistDashboard:
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => const TherapistShell(),
         );
 
       default:
