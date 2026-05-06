@@ -170,6 +170,30 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _ActionButton(
+                            label: 'Manage Therapists',
+                            icon: Icons.medical_services_outlined,
+                            onTap: () => Navigator.pushNamed(
+                                context, AppRoutes.adminManageTherapists),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _ActionButton(
+                            label: 'Assign Therapist',
+                            icon: Icons.assignment_ind_outlined,
+                            onTap: () => Navigator.pushNamed(
+                                context, AppRoutes.adminAssignTherapist),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Expanded(child: SizedBox()),
+                      ],
+                    ),
                     const SizedBox(height: 16),
                     SizedBox(
                       width: double.infinity,
