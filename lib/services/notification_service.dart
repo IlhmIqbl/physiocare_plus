@@ -262,10 +262,10 @@ class NotificationService {
     );
   }
 
-  Future<void> showNewPlanNotification() async {
+  Future<void> showNewPlanNotification([String? itemId]) async {
     if (kIsWeb) return;
     await _plugin.show(
-      1003,
+      itemId != null ? itemId.hashCode : 1003,
       'New Recovery Plan Available',
       'Your physiotherapist has created a new plan for you.',
       const NotificationDetails(
@@ -281,10 +281,10 @@ class NotificationService {
     );
   }
 
-  Future<void> showFeedbackNotification() async {
+  Future<void> showFeedbackNotification([String? itemId]) async {
     if (kIsWeb) return;
     await _plugin.show(
-      1004,
+      itemId != null ? itemId.hashCode : 1004,
       'New Feedback from Your Physiotherapist',
       'Your physiotherapist left you feedback.',
       const NotificationDetails(

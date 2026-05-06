@@ -17,6 +17,7 @@ class AppAuthProvider extends ChangeNotifier {
   late final _therapistService = TherapistService();
   final _notificationService = NotificationService();
 
+  StreamSubscription<User?>? _authSub;
   StreamSubscription<List<TherapistFeedbackModel>>? _feedbackSub;
   StreamSubscription<List<TherapistPlanModel>>? _planSub;
 
@@ -33,7 +34,7 @@ class AppAuthProvider extends ChangeNotifier {
 
   Future<void> initialize() async {
     try {
-      _authService.authStateChanges.listen((User? user) async {
+      _authSub = _authService.authStateChanges.listen((User? user) async {
         if (user != null) {
           _userModel = await _authService.getUserModel(user.uid);
           NotificationService().initFCM(user.uid).ignore();
@@ -54,15 +55,13 @@ class AppAuthProvider extends ChangeNotifier {
   void _startPatientListeners(String patientId) {
     _feedbackSub?.cancel();
     _planSub?.cancel();
-    _notifiedFeedbackIds.clear();
-    _notifiedPlanIds.clear();
 
     _feedbackSub =
         _therapistService.getUnreadFeedback(patientId).listen((items) {
       for (final item in items) {
         if (!_notifiedFeedbackIds.contains(item.id)) {
           _notifiedFeedbackIds.add(item.id);
-          _notificationService.showFeedbackNotification();
+          _notificationService.showFeedbackNotification(item.id);
         }
       }
     });
@@ -72,7 +71,7 @@ class AppAuthProvider extends ChangeNotifier {
       for (final plan in plans) {
         if (!_notifiedPlanIds.contains(plan.id)) {
           _notifiedPlanIds.add(plan.id);
-          _notificationService.showNewPlanNotification();
+          _notificationService.showNewPlanNotification(plan.id);
         }
       }
     });
@@ -159,6 +158,7 @@ class AppAuthProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    _authSub?.cancel();
     _stopPatientListeners();
     super.dispose();
   }
