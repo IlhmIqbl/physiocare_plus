@@ -57,6 +57,10 @@ class TherapistProvider extends ChangeNotifier {
         _feedback = feedback;
         notifyListeners();
       },
+      onError: (e) {
+        _error = e.toString();
+        notifyListeners();
+      },
     );
 
     _plansSub = _service.getTherapistPlans(patientId).listen(
@@ -64,11 +68,16 @@ class TherapistProvider extends ChangeNotifier {
         _plans = plans;
         notifyListeners();
       },
+      onError: (e) {
+        _error = e.toString();
+        notifyListeners();
+      },
     );
   }
 
   Future<void> addSessionFeedback(TherapistFeedbackModel feedback) async {
     _isLoading = true;
+    _error = null;
     notifyListeners();
     try {
       await _service.addSessionFeedback(feedback);
@@ -82,6 +91,7 @@ class TherapistProvider extends ChangeNotifier {
 
   Future<void> addProgressNote(TherapistFeedbackModel feedback) async {
     _isLoading = true;
+    _error = null;
     notifyListeners();
     try {
       await _service.addProgressNote(feedback);
@@ -95,6 +105,7 @@ class TherapistProvider extends ChangeNotifier {
 
   Future<void> createPlan(TherapistPlanModel plan) async {
     _isLoading = true;
+    _error = null;
     notifyListeners();
     try {
       await _service.createPlan(plan);
@@ -108,6 +119,7 @@ class TherapistProvider extends ChangeNotifier {
 
   Future<void> updatePlan(TherapistPlanModel plan) async {
     _isLoading = true;
+    _error = null;
     notifyListeners();
     try {
       await _service.updatePlan(plan);
