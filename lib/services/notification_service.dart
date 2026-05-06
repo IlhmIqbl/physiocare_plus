@@ -280,4 +280,24 @@ class NotificationService {
       ),
     );
   }
+
+  Future<void> showFeedbackNotification() async {
+    if (kIsWeb) return;
+    await _plugin.show(
+      1004,
+      'New Feedback from Your Physiotherapist',
+      'Your physiotherapist left you feedback.',
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'physiocare_feedback',
+          'Therapist Feedback',
+          channelDescription:
+              'Notifications when your physiotherapist leaves feedback',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(),
+      ),
+    );
+  }
 }
