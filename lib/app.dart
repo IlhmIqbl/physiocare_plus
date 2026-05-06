@@ -8,6 +8,7 @@ import 'package:physiocare/providers/exercise_provider.dart';
 import 'package:physiocare/providers/plan_provider.dart';
 import 'package:physiocare/providers/progress_provider.dart';
 import 'package:physiocare/providers/subscription_provider.dart';
+import 'package:physiocare/therapist/providers/therapist_provider.dart';
 
 class PhysioCareApp extends StatelessWidget {
   const PhysioCareApp({super.key});
@@ -21,6 +22,7 @@ class PhysioCareApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => PlanProvider()),
         ChangeNotifierProvider(create: (_) => ProgressProvider()),
         ChangeNotifierProvider(create: (_) => SubscriptionProvider()),
+        ChangeNotifierProvider(create: (_) => TherapistProvider()),
       ],
       child: MaterialApp(
         title: AppStrings.appName,
