@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:physiocare/models/user_model.dart';
 import 'package:physiocare/therapist/models/therapist_feedback_model.dart';
 import 'package:physiocare/therapist/models/therapist_plan_model.dart';
@@ -15,8 +16,10 @@ class TherapistService {
         .where('therapistId', isEqualTo: therapistId)
         .snapshots()
         .asyncMap((snapshot) async {
-      final patientIds =
-          snapshot.docs.map((d) => d['patientId'] as String).toList();
+      final patientIds = snapshot.docs
+          .map((d) => d.data()['patientId'] as String?)
+          .whereType<String>()
+          .toList();
       if (patientIds.isEmpty) return [];
       final futures = patientIds
           .map((id) => _db.collection('users').doc(id).get())
@@ -104,19 +107,29 @@ class TherapistService {
 
   Future<void> createTherapistAccount(
       String name, String email, String password) async {
-    final credential = await FirebaseAuth.instance
-        .createUserWithEmailAndPassword(email: email, password: password);
-    final uid = credential.user!.uid;
-    await _db.collection('users').doc(uid).set({
-      'name': name,
-      'email': email,
-      'userType': 'therapist',
-      'photoUrl': null,
-      'bodyFocusAreas': [],
-      'painSeverity': 0,
-      'createdAt': Timestamp.now(),
-      'therapistId': null,
-    });
+    // Use a secondary Firebase app instance so the admin session is not replaced
+    final secondaryApp = await Firebase.initializeApp(
+      name: 'therapist_creation',
+      options: Firebase.app().options,
+    );
+    try {
+      final credential = await FirebaseAuth.instanceFor(app: secondaryApp)
+          .createUserWithEmailAndPassword(email: email, password: password);
+      final uid = credential.user?.uid;
+      if (uid == null) throw Exception('User UID was null after account creation');
+      await _db.collection('users').doc(uid).set({
+        'name': name,
+        'email': email,
+        'userType': 'therapist',
+        'photoUrl': null,
+        'bodyFocusAreas': [],
+        'painSeverity': 0,
+        'createdAt': Timestamp.now(),
+        'therapistId': null,
+      });
+    } finally {
+      await secondaryApp.delete();
+    }
   }
 
   Future<void> assignTherapistToPatient(
