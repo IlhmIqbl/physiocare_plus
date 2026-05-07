@@ -7,7 +7,25 @@
       "Bash(flutter pub *)",
       "Bash(flutter run *)",
       "Bash(taskkill /F /IM dart.exe)",
-      "Bash(taskkill /F /IM flutter_tools.snapshot)"
+      "Bash(taskkill /F /IM flutter_tools.snapshot)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git -C /mnt/c/Users/User/physio ls-files --others --cached)",
+      "PowerShell(cmd /c \"dir C:\\\\Users\\\\User\\\\physio\")",
+      "PowerShell(cmd /c \"dir C:\\\\Users\\\\User\\\\physio\\\\lib\\\\models\")",
+      "PowerShell(cmd /c \"dir C:\\\\Users\\\\User\\\\physio\\\\test\")",
+      "PowerShell(New-Item *)",
+      "Bash(flutter test *)",
+      "Bash(git commit *)",
+      "Bash(git -C \"C:\\\\Users\\\\User\\\\physio\" add lib/therapist/providers/therapist_provider.dart)",
+      "Bash(git -C \"C:\\\\Users\\\\User\\\\physio\" commit -m \"fix: reset error state before writes and add onError to patient data streams\")",
+      "Bash(git stash *)",
+      "Bash(flutter analyze *)",
+      "Bash(New-Item -ItemType Directory -Path \"C:\\\\Users\\\\User\\\\physio\\\\lib\\\\therapist\\\\screens\" -Force)",
+      "Bash(Out-Null)",
+      "Bash(Write-Output \"Directory created\")",
+      "Bash(flutter --version)",
+      "Bash(git *)"
     ]
   }
 }

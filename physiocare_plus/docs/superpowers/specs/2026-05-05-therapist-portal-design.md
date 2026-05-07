@@ -77,16 +77,16 @@ users/{uid}
 
 ### Therapist Shell (`lib/therapist/screens/`)
 
-Bottom navigation with 3 tabs:
+Bottom navigation with 2 tabs: **Patients** and **Profile**. All patient-related screens are pushed onto the Patients tab's navigator stack.
 
-| Tab | Screen | Purpose |
-|-----|---------|---------|
-| Patients | `MyPatientsScreen` | List of assigned patients: name, last active date, streak |
-| — | `PatientDetailScreen` | Per-patient view with 3 inner tabs: Progress, Plans, Feedback |
-| — | `AddSessionFeedbackScreen` | Select a completed session → write comment → submit |
-| — | `AddProgressNoteScreen` | Write a general progress note for a patient → submit |
-| — | `CreateTherapistPlanScreen` | Build a custom plan: title, description, add exercises from library |
-| Profile | `TherapistProfileScreen` | Therapist name, logout |
+| Tab | Screen | Navigation |
+|-----|---------|-----------|
+| Patients | `MyPatientsScreen` | Root of Patients tab |
+| Patients | `PatientDetailScreen` | Pushed on patient tap; has 3 inner tabs: Progress, Plans, Feedback |
+| Patients | `AddSessionFeedbackScreen` | Pushed from Feedback inner tab |
+| Patients | `AddProgressNoteScreen` | Pushed from Feedback inner tab |
+| Patients | `CreateTherapistPlanScreen` | Pushed from Plans inner tab FAB |
+| Profile | `TherapistProfileScreen` | Root of Profile tab |
 
 **`PatientDetailScreen` inner tabs:**
 - **Progress tab** — read-only view of patient's session history and pain chart (reuses existing `ProgressService`)
@@ -100,7 +100,7 @@ Two new screens added to the existing admin navigation:
 | Screen | Purpose |
 |--------|---------|
 | `ManageTherapistsScreen` | List existing therapist accounts; create new therapist (name, email, password via Firebase Auth + Firestore write) |
-| `AssignTherapistScreen` | Pick a patient from dropdown → pick a therapist from dropdown → save to `therapist_patients`; also writes `therapistId` onto the patient's `users` doc |
+| `AssignTherapistScreen` | Pick a patient from dropdown → pick a therapist from dropdown → save to `therapist_patients`; also writes `therapistId` onto the patient's `users` doc. If the patient already has a `therapistId`, the old `therapist_patients` record is deleted and replaced (reassignment). |
 
 ### Patient Dashboard Additions (existing screens)
 
@@ -108,8 +108,8 @@ Two additions to the existing patient-facing app:
 
 | Addition | Location | Purpose |
 |----------|----------|---------|
-| `MyTherapistCard` | Home dashboard | Shows assigned therapist's name; "No therapist assigned yet" if `therapistId` is null |
-| `TherapistFeedbackScreen` | New tab or card on home | Chronological list of all feedback from therapist; session comments link to the relevant session; marks `readByPatient = true` on open |
+| `MyTherapistCard` | Home dashboard — rendered as a card widget | Shows assigned therapist's name; taps through to `TherapistFeedbackScreen`; shows "No therapist assigned yet" if `therapistId` is null |
+| `TherapistFeedbackScreen` | Full screen, pushed from `MyTherapistCard` tap | Chronological list of all feedback from therapist; session comments link to the relevant session; marks `readByPatient = true` on open |
 
 ---
 
