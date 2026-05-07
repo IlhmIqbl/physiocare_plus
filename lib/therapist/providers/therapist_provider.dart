@@ -135,6 +135,21 @@ class TherapistProvider extends ChangeNotifier {
     await _service.deletePlan(planId);
   }
 
+  void reset() {
+    _patientsSub?.cancel();
+    _feedbackSub?.cancel();
+    _plansSub?.cancel();
+    _patientsSub = null;
+    _feedbackSub = null;
+    _plansSub = null;
+    _patients = [];
+    _selectedPatient = null;
+    _feedback = [];
+    _plans = [];
+    _error = null;
+    notifyListeners();
+  }
+
   void clearError() {
     _error = null;
     notifyListeners();

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:physiocare/providers/auth_provider.dart';
+import 'package:physiocare/therapist/providers/therapist_provider.dart';
 import 'package:physiocare/utils/app_constants.dart';
 
 class TherapistProfileScreen extends StatelessWidget {
@@ -62,6 +63,7 @@ class TherapistProfileScreen extends StatelessWidget {
             title: const Text('Logout',
                 style: TextStyle(color: Colors.red)),
             onTap: () async {
+              context.read<TherapistProvider>().reset();
               await context.read<AppAuthProvider>().signOut();
               if (context.mounted) {
                 Navigator.pushReplacementNamed(context, AppRoutes.login);

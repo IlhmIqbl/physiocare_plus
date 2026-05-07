@@ -38,7 +38,7 @@ class AppAuthProvider extends ChangeNotifier {
         if (user != null) {
           _userModel = await _authService.getUserModel(user.uid);
           NotificationService().initFCM(user.uid).ignore();
-          if (_userModel?.userType == 'patient') {
+          if (_userModel?.userType != 'admin' && _userModel?.userType != 'therapist') {
             _startPatientListeners(user.uid);
           }
         } else {

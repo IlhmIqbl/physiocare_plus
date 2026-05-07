@@ -100,7 +100,7 @@ class TherapistService {
   Future<List<UserModel>> getAllPatients() async {
     final snapshot = await _db
         .collection('users')
-        .where('userType', isEqualTo: 'patient')
+        .where('userType', whereNotIn: ['admin', 'therapist'])
         .get();
     return snapshot.docs.map((d) => UserModel.fromFirestore(d)).toList();
   }
