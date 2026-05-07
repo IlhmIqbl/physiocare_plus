@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -15,6 +17,7 @@ class TherapistFeedbackScreen extends StatefulWidget {
 
 class _TherapistFeedbackScreenState extends State<TherapistFeedbackScreen> {
   final _service = TherapistService();
+  StreamSubscription<List<TherapistFeedbackModel>>? _sub;
   List<TherapistFeedbackModel> _feedback = [];
   bool _isLoading = true;
 
@@ -30,7 +33,7 @@ class _TherapistFeedbackScreenState extends State<TherapistFeedbackScreen> {
       setState(() => _isLoading = false);
       return;
     }
-    _service.getPatientFeedback(patientId).listen((items) async {
+    _sub = _service.getPatientFeedback(patientId).listen((items) async {
       if (!mounted) return;
       setState(() {
         _feedback = items;
@@ -40,6 +43,12 @@ class _TherapistFeedbackScreenState extends State<TherapistFeedbackScreen> {
         await _service.markFeedbackRead(item.id);
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
   }
 
   @override

@@ -29,14 +29,40 @@ class MyTherapistCard extends StatelessWidget {
       );
     }
 
+    return _TherapistCardLoaded(therapistId: therapistId);
+  }
+}
+
+class _TherapistCardLoaded extends StatefulWidget {
+  const _TherapistCardLoaded({required this.therapistId});
+  final String therapistId;
+
+  @override
+  State<_TherapistCardLoaded> createState() => _TherapistCardLoadedState();
+}
+
+class _TherapistCardLoadedState extends State<_TherapistCardLoaded> {
+  late final Future<DocumentSnapshot> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.therapistId)
+        .get();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return FutureBuilder<DocumentSnapshot>(
-      future: FirebaseFirestore.instance.collection('users').doc(therapistId).get(),
+      future: _future,
       builder: (context, snapshot) {
         String therapistName = 'Your Physiotherapist';
         if (snapshot.hasData && snapshot.data!.exists) {
           therapistName =
-              (snapshot.data!.data() as Map<String, dynamic>)['name'] as String?
-                  ?? therapistName;
+              (snapshot.data!.data() as Map<String, dynamic>)['name']
+                  as String? ?? therapistName;
         }
         return Card(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
