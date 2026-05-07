@@ -13,6 +13,7 @@ Built with Flutter 3.x, Firebase Auth, Cloud Firestore, Firebase Storage, and Fi
 | Phase 1 | Foundation, auth, all core screens | ✅ Complete |
 | Phase 1 patch | Android config, Firebase wiring, build fixes | ✅ Complete |
 | Phase 2 | Push notifications (FCM), onboarding flow, admin CRUD | ✅ Complete |
+| Phase 3 | Therapist portal, patient–therapist connections, local notifications | ✅ Complete |
 
 ---
 
@@ -54,7 +55,7 @@ Built with Flutter 3.x, Firebase Auth, Cloud Firestore, Firebase Storage, and Fi
 ### Build
 - Web (`flutter build web --release`) ✅
 - Android APK (`flutter build apk --debug`) ✅
-- 14 passing widget tests (PainSlider, SessionTimer, PremiumBadge, LoginScreen, OnboardingScreen, RemindersScreen)
+- 22 passing tests (16 widget tests + 6 therapist model unit tests)
 
 ---
 
@@ -80,6 +81,44 @@ Design spec: `docs/superpowers/specs/2026-04-27-phase2-design.md`
 - `admin_users_screen.dart` — list all users, change subscription type
 - `admin_exercises_screen.dart` — full exercise CRUD with dynamic steps form
 - `admin_plans_screen.dart` — view/delete all plans, create plan for any user
+
+---
+
+## Phase 3 — Complete ✅
+
+Design spec: `docs/superpowers/specs/2026-05-05-therapist-portal-design.md`
+
+### Therapist Portal (3rd Dashboard)
+- `TherapistShell` with Patients and Profile bottom tabs
+- `MyPatientsScreen` — list of patients assigned to the logged-in therapist
+- `PatientDetailScreen` — 3 inner tabs: Progress (read-only), Plans, Feedback
+- `AddSessionFeedbackScreen` — leave a comment tied to a specific completed session
+- `AddProgressNoteScreen` — leave a general progress note
+- `CreateTherapistPlanScreen` — create or edit a custom recovery plan for a patient (exercise picker, sets/reps/duration)
+- `TherapistProfileScreen` — profile view with logout
+
+### Admin Additions
+- `ManageTherapistsScreen` — list therapist accounts; create new therapist (name, email, password via Firebase Auth + Firestore)
+- `AssignTherapistScreen` — assign or reassign a therapist to a patient; writes `therapistId` onto the patient's user doc
+
+### Patient Additions
+- `MyTherapistCard` — home dashboard card showing assigned therapist; taps through to feedback thread
+- `TherapistFeedbackScreen` — chronological list of all feedback from therapist; marks items read on open
+
+### Local Notifications (patient-side)
+- `showFeedbackNotification()` — fires when therapist leaves new feedback (`readByPatient == false`)
+- `showNewPlanNotification()` — fires when therapist assigns a new active plan
+- Listeners start after patient login in `AuthProvider`, disposed on logout
+- Dedup sets prevent repeat notifications across token refreshes
+
+### New Firestore Collections
+- `therapist_patients` — assignment records (therapistId, patientId, assignedAt, assignedBy)
+- `therapist_feedback` — session comments and progress notes (`type: "session" | "progress"`, `readByPatient`)
+- `therapist_plans` — therapist-created recovery plans (exercises with sets/reps/duration, `active` flag)
+
+### Build
+- 22 passing tests (6 model unit tests + 16 widget tests)
+- `firestore.indexes.json` with 5 composite indexes (deploy with `firebase deploy --only firestore:indexes`)
 
 ---
 
@@ -130,11 +169,32 @@ lib/
 │   ├── subscription/subscription_screen.dart
 │   ├── profile/profile_screen.dart
 │   ├── notifications/reminders_screen.dart
-│   └── admin/
-│       ├── admin_dashboard_screen.dart
-│       ├── admin_users_screen.dart
-│       ├── admin_exercises_screen.dart
-│       └── admin_plans_screen.dart
+│   ├── admin/
+│   │   ├── admin_dashboard_screen.dart
+│   │   ├── admin_users_screen.dart
+│   │   ├── admin_exercises_screen.dart
+│   │   ├── admin_plans_screen.dart
+│   │   ├── manage_therapists_screen.dart   # Phase 3
+│   │   └── assign_therapist_screen.dart    # Phase 3
+│   └── patient/
+│       └── therapist_feedback_screen.dart  # Phase 3
+│
+├── therapist/                              # Phase 3 — therapist portal
+│   ├── models/
+│   │   ├── therapist_feedback_model.dart
+│   │   └── therapist_plan_model.dart
+│   ├── services/
+│   │   └── therapist_service.dart
+│   ├── providers/
+│   │   └── therapist_provider.dart
+│   └── screens/
+│       ├── therapist_shell.dart
+│       ├── my_patients_screen.dart
+│       ├── patient_detail_screen.dart
+│       ├── add_session_feedback_screen.dart
+│       ├── add_progress_note_screen.dart
+│       ├── create_therapist_plan_screen.dart
+│       └── therapist_profile_screen.dart
 │
 ├── widgets/
 │   ├── exercise_card.dart
@@ -143,7 +203,8 @@ lib/
 │   ├── session_timer.dart
 │   ├── video_player_widget.dart
 │   ├── body_area_selector.dart
-│   └── premium_badge.dart
+│   ├── premium_badge.dart
+│   └── my_therapist_card.dart             # Phase 3
 │
 └── utils/
     ├── app_theme.dart
@@ -158,9 +219,10 @@ lib/
 
 ```
 users/{userId}
-  name, email, photoUrl, userType (freemium|premium|admin),
+  name, email, photoUrl, userType (freemium|premium|admin|therapist),
   createdAt, bodyFocusAreas[], painSeverity (1-10),
-  fcmToken, notificationPrefs { dailyReminder, reminderTime, streakAlerts, planUpdates }
+  fcmToken, notificationPrefs { dailyReminder, reminderTime, streakAlerts, planUpdates },
+  therapistId (string, nullable — set by admin on assignment)   # Phase 3
 
 exercises/{exerciseId}
   title, description, bodyArea, difficulty (easy|medium|hard),
@@ -185,13 +247,28 @@ subscriptions/{userId}
 
 reminders/{reminderId}
   userId, title, scheduledTime, daysOfWeek[], isActive
+
+# Phase 3 collections
+therapist_patients/{docId}
+  therapistId, patientId, assignedAt, assignedBy
+
+therapist_feedback/{docId}
+  therapistId, patientId, type (session|progress), sessionId?,
+  message, createdAt, readByPatient (bool)
+
+therapist_plans/{docId}
+  therapistId, patientId, title, description,
+  exercises [{ exerciseId, sets, reps, durationSecs }],
+  createdAt, active (bool)
 ```
 
 ---
 
 ## Key Feature Flows
 
-**Auth:** Splash → check Firebase Auth state → Dashboard (logged in) or Login (not logged in). Registration creates Firestore user doc + default freemium subscription doc.
+**Auth:** Splash → check Firebase Auth state → role-based route: therapist → TherapistShell, admin → AdminDashboard, patient → Dashboard, else Login. Registration creates Firestore user doc + default freemium subscription doc.
+
+**Therapist portal:** Admin creates therapist account (ManageTherapists) → assigns to patient (AssignTherapist). Therapist logs in → sees assigned patients → opens patient detail → views progress, creates plans, leaves feedback. Patient sees MyTherapistCard on home, receives local notification on new feedback or plan, taps to open TherapistFeedbackScreen.
 
 **Exercise:** Library → filter by body area → Detail screen → Start → Session screen (video, timer, pause/resume) → Complete → Pain Log → save Progress → show summary.
 
@@ -237,6 +314,14 @@ flutter build apk --debug      # Android APK
 
 Log in as admin → Admin Dashboard → tap **"Seed Sample Exercises"**.
 
+### Firestore indexes (Phase 3)
+
+```bash
+firebase deploy --only firestore:indexes
+```
+
+Required for therapist feedback and plan queries. Run once before first use.
+
 ### Cloud Functions (Phase 2)
 
 ```bash
@@ -269,6 +354,25 @@ service cloud.firestore {
       allow read, write: if request.auth != null &&
         request.auth.uid == resource.data.userId;
     }
+    match /therapist_feedback/{docId} {
+      allow read: if request.auth != null &&
+        (request.auth.uid == resource.data.patientId || request.auth.uid == resource.data.therapistId);
+      allow write: if request.auth != null &&
+        request.auth.uid == resource.data.therapistId;
+    }
+    match /therapist_plans/{docId} {
+      allow read: if request.auth != null &&
+        (request.auth.uid == resource.data.patientId || request.auth.uid == resource.data.therapistId);
+      allow write: if request.auth != null &&
+        request.auth.uid == resource.data.therapistId;
+    }
+    match /therapist_patients/{docId} {
+      allow read: if request.auth != null &&
+        (request.auth.uid == resource.data.therapistId ||
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'admin');
+      allow write: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'admin';
+    }
   }
 }
 ```
@@ -279,9 +383,10 @@ service cloud.firestore {
 
 | Role | Access |
 |------|--------|
-| `freemium` | Exercise library, basic progress, 1 active plan |
-| `premium` | All features + advanced analytics |
-| `admin` | Admin dashboard, user management, exercise CRUD, plan management |
+| `freemium` | Exercise library, basic progress, 1 active plan, therapist feedback |
+| `premium` | All features + advanced analytics + therapist feedback |
+| `admin` | Admin dashboard, user management, exercise CRUD, plan management, therapist management |
+| `therapist` | Therapist portal — assigned patient list, progress view, feedback, custom plans |
 
 ---
 
