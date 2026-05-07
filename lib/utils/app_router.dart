@@ -21,6 +21,7 @@ import 'package:physiocare/screens/onboarding/onboarding_screen.dart';
 import 'package:physiocare/therapist/screens/therapist_shell.dart';
 import 'package:physiocare/screens/admin/manage_therapists_screen.dart';
 import 'package:physiocare/screens/admin/assign_therapist_screen.dart';
+import 'package:physiocare/screens/patient/therapist_feedback_screen.dart';
 
 class AppRouter {
   AppRouter._();
@@ -151,6 +152,12 @@ class AppRouter {
         return MaterialPageRoute(
           settings: settings,
           builder: (_) => const AssignTherapistScreen(),
+        );
+
+      case AppRoutes.therapistFeedback:
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => const TherapistFeedbackScreen(),
         );
 
       default:

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:physiocare/widgets/my_therapist_card.dart';
 import 'package:physiocare/providers/auth_provider.dart';
 import 'package:physiocare/providers/plan_provider.dart';
 import 'package:physiocare/providers/progress_provider.dart';
@@ -111,6 +112,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _buildGreeting(authProvider),
           const SizedBox(height: 20),
           _buildStreakCard(progressProvider),
+          const SizedBox(height: 20),
+          const MyTherapistCard(),
           const SizedBox(height: 20),
           const Text(
             'Quick Stats',
