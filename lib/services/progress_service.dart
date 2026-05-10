@@ -19,10 +19,35 @@ class ProgressService {
     return session.id;
   }
 
-  Future<void> completeSession(String sessionId, DateTime completedAt) async {
+  Future<void> completeSession(
+      String sessionId, DateTime completedAt, int totalSteps) async {
     await _db.collection('sessions').doc(sessionId).update({
       'completed': true,
       'completedAt': Timestamp.fromDate(completedAt),
+      'status': 'completed',
+      'stepsCompleted': totalSteps,
+      'totalSteps': totalSteps,
+      'completionPercent': 100.0,
+    });
+  }
+
+  Future<void> stopSession({
+    required String sessionId,
+    required int stepsCompleted,
+    required int totalSteps,
+    required int? painLevel,
+    required String? painNote,
+  }) async {
+    final pct = totalSteps > 0 ? stepsCompleted / totalSteps * 100.0 : 0.0;
+    await _db.collection('sessions').doc(sessionId).update({
+      'completed': false,
+      'completedAt': Timestamp.fromDate(DateTime.now()),
+      'status': 'stopped',
+      'stepsCompleted': stepsCompleted,
+      'totalSteps': totalSteps,
+      'painLevel': painLevel,
+      'painNote': painNote,
+      'completionPercent': pct,
     });
   }
 

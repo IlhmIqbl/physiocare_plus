@@ -60,13 +60,18 @@ class ProgressProvider extends ChangeNotifier {
     return id;
   }
 
-  Future<void> completeSession(String sessionId, DateTime completedAt) async {
-    await _progressService.completeSession(sessionId, completedAt);
+  Future<void> completeSession(
+      String sessionId, DateTime completedAt, int totalSteps) async {
+    await _progressService.completeSession(sessionId, completedAt, totalSteps);
     final index = _sessions.indexWhere((s) => s.id == sessionId);
     if (index != -1) {
       _sessions[index] = _sessions[index].copyWith(
         completed: true,
         completedAt: completedAt,
+        status: 'completed',
+        stepsCompleted: totalSteps,
+        totalSteps: totalSteps,
+        completionPercent: 100.0,
       );
     }
     notifyListeners();
@@ -76,6 +81,23 @@ class ProgressProvider extends ChangeNotifier {
       await ns.checkAndNotifyStreakMilestone(_userId!);
       await ns.cancelTodayStreakReminder();
     }
+  }
+
+  Future<void> stopSession({
+    required String sessionId,
+    required int stepsCompleted,
+    required int totalSteps,
+    required int? painLevel,
+    required String? painNote,
+  }) async {
+    await _progressService.stopSession(
+      sessionId: sessionId,
+      stepsCompleted: stepsCompleted,
+      totalSteps: totalSteps,
+      painLevel: painLevel,
+      painNote: painNote,
+    );
+    notifyListeners();
   }
 
   Future<void> saveProgress(ProgressModel progress) async {
