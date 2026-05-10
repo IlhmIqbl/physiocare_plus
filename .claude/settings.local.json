@@ -25,7 +25,8 @@
       "Bash(Out-Null)",
       "Bash(Write-Output \"Directory created\")",
       "Bash(flutter --version)",
-      "Bash(git *)"
+      "Bash(git *)",
+      "Skill(commit-commands:commit)"
     ]
   }
 }

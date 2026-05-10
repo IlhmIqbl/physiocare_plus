@@ -394,6 +394,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 16),
 
+                // ---- Admin Panel button (admin only) ----
+                if (userType == 'admin') ...[
+                  ElevatedButton.icon(
+                    onPressed: () =>
+                        Navigator.of(context).pushNamed(AppRoutes.adminDashboard),
+                    icon: const Icon(Icons.admin_panel_settings),
+                    label: const Text('Go to Admin Panel'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF00897B),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+
                 // ---- Sign Out button ----
                 OutlinedButton.icon(
                   onPressed: () async {
