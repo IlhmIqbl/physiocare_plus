@@ -64,6 +64,9 @@ dependencies:
   image_picker: ^1.1.2
   cached_network_image: ^3.3.1
 
+  # Link launching (YouTube videos)
+  url_launcher: ^6.3.1
+
   # Internationalization
   intl: ^0.19.0
 
