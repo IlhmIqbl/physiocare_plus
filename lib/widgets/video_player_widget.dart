@@ -123,10 +123,10 @@ class _YouTubeThumbnail extends StatelessWidget {
             Image.network(
               'https://img.youtube.com/vi/$youtubeId/hqdefault.jpg',
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) =>
+              errorBuilder: (context, error, stackTrace) =>
                   Container(color: const Color(0xFF00897B)),
             ),
-            Container(color: Colors.black.withOpacity(0.3)),
+            Container(color: Colors.black.withValues(alpha: 0.3)),
             const Center(
               child: Icon(Icons.play_circle_fill, size: 72, color: Colors.white),
             ),
@@ -137,7 +137,7 @@ class _YouTubeThumbnail extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.65),
+                  color: Colors.black.withValues(alpha: 0.65),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: const Row(
