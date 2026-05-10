@@ -135,9 +135,8 @@ class _ExerciseSessionScreenState extends State<ExerciseSessionScreen> {
     final elapsed =
         DateTime.now().difference(_sessionStart).inSeconds;
     final total = _exercise.steps.length;
-    await context
-        .read<ProgressProvider>()
-        .completeSession(_sessionId, DateTime.now(), total);
+    final progressProvider = context.read<ProgressProvider>();
+    await progressProvider.completeSession(_sessionId, DateTime.now(), total);
     if (mounted) {
       Navigator.pushReplacementNamed(
         context,
@@ -156,6 +155,8 @@ class _ExerciseSessionScreenState extends State<ExerciseSessionScreen> {
     _countdownTimer?.cancel();
     _videoController?.pause();
 
+    final progressProvider = context.read<ProgressProvider>();
+
     final result = await showDialog<PainStopResult>(
       context: context,
       builder: (_) => const PainStopDialog(),
@@ -166,13 +167,13 @@ class _ExerciseSessionScreenState extends State<ExerciseSessionScreen> {
       return;
     }
 
-    await context.read<ProgressProvider>().stopSession(
-          sessionId: _sessionId,
-          stepsCompleted: _currentStepIndex,
-          totalSteps: _exercise.steps.length,
-          painLevel: result.painLevel,
-          painNote: result.painNote,
-        );
+    await progressProvider.stopSession(
+      sessionId: _sessionId,
+      stepsCompleted: _currentStepIndex,
+      totalSteps: _exercise.steps.length,
+      painLevel: result.painLevel,
+      painNote: result.painNote,
+    );
 
     if (mounted) Navigator.pop(context);
   }
@@ -214,7 +215,7 @@ class _ExerciseSessionScreenState extends State<ExerciseSessionScreen> {
                   style: TextStyle(fontSize: 11, color: Colors.white70)),
               Switch(
                 value: _isPauseBetweenSteps,
-                activeColor: Colors.white,
+                activeThumbColor: Colors.white,
                 onChanged: (v) =>
                     setState(() => _isPauseBetweenSteps = v),
               ),
