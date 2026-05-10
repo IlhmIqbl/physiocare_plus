@@ -200,6 +200,10 @@ class ExerciseDetailScreen extends StatelessWidget {
                           startedAt: DateTime.now(),
                           durationSeconds: exercise.duration,
                           completed: false,
+                          totalSteps: exercise.steps.length,
+                          stepsCompleted: 0,
+                          status: 'in_progress',
+                          completionPercent: 0.0,
                         );
 
                         final sessionId =
