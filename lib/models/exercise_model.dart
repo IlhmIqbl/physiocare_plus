@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:physiocare/models/exercise_step_model.dart';
 
 class ExerciseModel {
   final String id;
@@ -10,7 +11,7 @@ class ExerciseModel {
   final String videoUrl;
   final String thumbnailUrl;
   final List<String> targetPainTypes;
-  final List<String> steps;
+  final List<ExerciseStep> steps;
   final bool isActive;
   final DateTime createdAt;
 
@@ -30,6 +31,15 @@ class ExerciseModel {
   });
 
   factory ExerciseModel.fromMap(Map<String, dynamic> map, String id) {
+    final rawSteps = map['steps'];
+    List<ExerciseStep> parsedSteps = [];
+    if (rawSteps is List) {
+      parsedSteps = rawSteps.map((s) {
+        if (s is Map<String, dynamic>) return ExerciseStep.fromMap(s);
+        return ExerciseStep(
+            description: s.toString(), videoUrl: '', durationSeconds: 30);
+      }).toList();
+    }
     return ExerciseModel(
       id: id,
       title: map['title'] as String? ?? '',
@@ -40,7 +50,7 @@ class ExerciseModel {
       videoUrl: map['videoUrl'] as String? ?? '',
       thumbnailUrl: map['thumbnailUrl'] as String? ?? '',
       targetPainTypes: List<String>.from(map['targetPainTypes'] ?? []),
-      steps: List<String>.from(map['steps'] ?? []),
+      steps: parsedSteps,
       isActive: map['isActive'] as bool? ?? true,
       createdAt: map['createdAt'] != null
           ? (map['createdAt'] as Timestamp).toDate()
@@ -48,25 +58,22 @@ class ExerciseModel {
     );
   }
 
-  factory ExerciseModel.fromFirestore(DocumentSnapshot doc) {
-    return ExerciseModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
-  }
+  factory ExerciseModel.fromFirestore(DocumentSnapshot doc) =>
+      ExerciseModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
 
-  Map<String, dynamic> toMap() {
-    return {
-      'title': title,
-      'description': description,
-      'bodyArea': bodyArea,
-      'difficulty': difficulty,
-      'duration': duration,
-      'videoUrl': videoUrl,
-      'thumbnailUrl': thumbnailUrl,
-      'targetPainTypes': targetPainTypes,
-      'steps': steps,
-      'isActive': isActive,
-      'createdAt': Timestamp.fromDate(createdAt),
-    };
-  }
+  Map<String, dynamic> toMap() => {
+        'title': title,
+        'description': description,
+        'bodyArea': bodyArea,
+        'difficulty': difficulty,
+        'duration': duration,
+        'videoUrl': videoUrl,
+        'thumbnailUrl': thumbnailUrl,
+        'targetPainTypes': targetPainTypes,
+        'steps': steps.map((s) => s.toMap()).toList(),
+        'isActive': isActive,
+        'createdAt': Timestamp.fromDate(createdAt),
+      };
 
   ExerciseModel copyWith({
     String? id,
@@ -78,7 +85,7 @@ class ExerciseModel {
     String? videoUrl,
     String? thumbnailUrl,
     List<String>? targetPainTypes,
-    List<String>? steps,
+    List<ExerciseStep>? steps,
     bool? isActive,
     DateTime? createdAt,
   }) {

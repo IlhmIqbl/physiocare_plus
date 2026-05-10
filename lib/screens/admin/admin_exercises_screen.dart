@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:physiocare/models/exercise_model.dart';
+import 'package:physiocare/models/exercise_step_model.dart';
 import 'package:physiocare/services/exercise_service.dart';
 import 'package:physiocare/services/firestore_service.dart';
 
@@ -246,7 +247,7 @@ class _ExerciseFormSheetState extends State<_ExerciseFormSheet> {
     _durationCtrl =
         TextEditingController(text: e != null ? '${e.duration}' : '');
     _stepsCtrl = TextEditingController(
-        text: e != null ? e.steps.join(', ') : '');
+        text: e != null ? e.steps.map((s) => s.description).join(', ') : '');
     _bodyArea = e?.bodyArea ?? widget.bodyAreas.first;
     _difficulty = e?.difficulty ?? widget.difficulties.first;
     _isActive = e?.isActive ?? true;
@@ -269,12 +270,6 @@ class _ExerciseFormSheetState extends State<_ExerciseFormSheet> {
     setState(() => _isSaving = true);
 
     try {
-      final steps = _stepsCtrl.text
-          .split(',')
-          .map((s) => s.trim())
-          .where((s) => s.isNotEmpty)
-          .toList();
-
       final duration = int.tryParse(_durationCtrl.text.trim()) ?? 0;
       final now = DateTime.now();
 
@@ -292,7 +287,12 @@ class _ExerciseFormSheetState extends State<_ExerciseFormSheet> {
           videoUrl: _videoUrlCtrl.text.trim(),
           thumbnailUrl: _thumbnailUrlCtrl.text.trim(),
           targetPainTypes: const [],
-          steps: steps,
+          steps: _stepsCtrl.text
+              .split(',')
+              .map((s) => s.trim())
+              .where((s) => s.isNotEmpty)
+              .map((s) => ExerciseStep(description: s, videoUrl: '', durationSeconds: 30))
+              .toList(),
           isActive: _isActive,
           createdAt: now,
         );
@@ -307,7 +307,12 @@ class _ExerciseFormSheetState extends State<_ExerciseFormSheet> {
           duration: duration,
           videoUrl: _videoUrlCtrl.text.trim(),
           thumbnailUrl: _thumbnailUrlCtrl.text.trim(),
-          steps: steps,
+          steps: _stepsCtrl.text
+              .split(',')
+              .map((s) => s.trim())
+              .where((s) => s.isNotEmpty)
+              .map((s) => ExerciseStep(description: s, videoUrl: '', durationSeconds: 30))
+              .toList(),
           isActive: _isActive,
         );
         await widget.exerciseService.updateExercise(updated);

@@ -167,7 +167,7 @@ class ExerciseDetailScreen extends StatelessWidget {
                           foregroundColor: Colors.white,
                           child: Text('${index + 1}'),
                         ),
-                        title: Text(exercise.steps[index]),
+                        title: Text(exercise.steps[index].description),
                         contentPadding: EdgeInsets.zero,
                       );
                     },
