@@ -114,6 +114,7 @@ class _ExerciseSessionScreenState extends State<ExerciseSessionScreen> {
         setState(() => _countdownSeconds--);
       } else {
         t.cancel();
+        setState(() => _countdownSeconds = 0);
         _advanceStep();
       }
     });
@@ -280,28 +281,8 @@ class _ExerciseSessionScreenState extends State<ExerciseSessionScreen> {
                             color: Colors.grey, fontSize: 14),
                       ),
                     ),
-                  if (_isPauseBetweenSteps && _videoEnded)
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 14),
-                          shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(10)),
-                        ),
-                        onPressed: _advanceStep,
-                        child: Text(
-                          _currentStepIndex < total - 1
-                              ? 'Next Step'
-                              : 'Finish',
-                        ),
-                      ),
-                    ),
-                  if (_currentStep.videoUrl.isEmpty && !_videoInitializing)
+                  if ((_isPauseBetweenSteps && _videoEnded) ||
+                      (_currentStep.videoUrl.isEmpty && !_videoInitializing))
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
