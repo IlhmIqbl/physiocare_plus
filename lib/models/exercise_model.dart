@@ -32,17 +32,19 @@ class ExerciseModel {
   factory ExerciseModel.fromMap(Map<String, dynamic> map, String id) {
     return ExerciseModel(
       id: id,
-      title: map['title'] as String,
-      description: map['description'] as String,
-      bodyArea: map['bodyArea'] as String,
-      difficulty: map['difficulty'] as String,
-      duration: map['duration'] as int,
-      videoUrl: map['videoUrl'] as String,
-      thumbnailUrl: map['thumbnailUrl'] as String,
+      title: map['title'] as String? ?? '',
+      description: map['description'] as String? ?? '',
+      bodyArea: map['bodyArea'] as String? ?? '',
+      difficulty: map['difficulty'] as String? ?? 'easy',
+      duration: map['duration'] as int? ?? 0,
+      videoUrl: map['videoUrl'] as String? ?? '',
+      thumbnailUrl: map['thumbnailUrl'] as String? ?? '',
       targetPainTypes: List<String>.from(map['targetPainTypes'] ?? []),
       steps: List<String>.from(map['steps'] ?? []),
-      isActive: map['isActive'] as bool,
-      createdAt: (map['createdAt'] as Timestamp).toDate(),
+      isActive: map['isActive'] as bool? ?? true,
+      createdAt: map['createdAt'] != null
+          ? (map['createdAt'] as Timestamp).toDate()
+          : DateTime.now(),
     );
   }
 

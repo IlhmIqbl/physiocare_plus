@@ -204,7 +204,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           await ExerciseSeeder.seed();
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('6 sample exercises added!')),
+                              const SnackBar(content: Text('Exercises seeded successfully!')),
                             );
                             _loadStats();
                           }

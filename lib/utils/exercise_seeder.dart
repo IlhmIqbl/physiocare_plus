@@ -8,8 +8,9 @@ class ExerciseSeeder {
   static Future<void> seed() async {
     final db = FirebaseFirestore.instance;
 
-    final existing = await db.collection('exercises').limit(1).get();
-    if (existing.docs.isNotEmpty) return;
+    // Only skip if we already have a full set (50+) of exercises
+    final existing = await db.collection('exercises').limit(50).get();
+    if (existing.docs.length >= 50) return;
 
     const batchSize = 500;
     final all = _exercises();
