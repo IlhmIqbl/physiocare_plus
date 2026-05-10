@@ -40,6 +40,7 @@ class ExerciseSeeder {
     }) {
       final url = videoId.isNotEmpty ? _yt(videoId) : '';
       final thumb = videoId.isNotEmpty ? _thumb(videoId) : '';
+      final stepDur = steps.isNotEmpty ? duration ~/ steps.length : 30;
       return {
         'title': title,
         'description': description,
@@ -49,7 +50,13 @@ class ExerciseSeeder {
         'videoUrl': url,
         'thumbnailUrl': thumb,
         'targetPainTypes': targetPainTypes,
-        'steps': steps,
+        'steps': steps
+            .map((s) => {
+                  'description': s,
+                  'videoUrl': '',
+                  'durationSeconds': stepDur,
+                })
+            .toList(),
         'isActive': true,
         'createdAt': now,
       };
