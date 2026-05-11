@@ -1,10 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ExerciseSeeder {
-  static String _yt(String id) => 'https://www.youtube.com/watch?v=$id';
-  static String _thumb(String id) =>
-      'https://img.youtube.com/vi/$id/hqdefault.jpg';
-
   static const _cdnBase =
       'https://res.cloudinary.com/dgq7kbqjg/video/upload/f_mp4,q_auto';
 
@@ -29,8 +25,9 @@ class ExerciseSeeder {
     'ankle_hard':       '$_cdnBase/physio/ankle',
   };
 
-  /// Patches videoUrl on every step of every existing exercise document.
-  /// Safe to run at any time — only overwrites the videoUrl field, nothing else.
+  /// Replaces all YouTube URLs with Cloudinary inline MP4 URLs.
+  /// Updates the exercise-level videoUrl, thumbnailUrl, and every step's
+  /// videoUrl. Safe to run at any time — existing data is not deleted.
   static Future<int> updateStepVideos() async {
     final db = FirebaseFirestore.instance;
     final snapshot = await db.collection('exercises').get();
@@ -45,9 +42,11 @@ class ExerciseSeeder {
         final data = doc.data();
         final bodyArea = data['bodyArea'] as String? ?? '';
         final difficulty = data['difficulty'] as String? ?? '';
-        final videoUrl =
-            _stepVideoMap['${bodyArea}_$difficulty'] ?? '';
+        final videoUrl = _stepVideoMap['${bodyArea}_$difficulty'] ?? '';
         if (videoUrl.isEmpty) continue;
+
+        final thumbnailUrl =
+            '${videoUrl.replaceFirst('f_mp4,q_auto', 'f_jpg,q_auto')}.jpg';
 
         final rawSteps = data['steps'] as List<dynamic>? ?? [];
         final updatedSteps = rawSteps.map((s) {
@@ -56,7 +55,11 @@ class ExerciseSeeder {
           return step;
         }).toList();
 
-        batch.update(doc.reference, {'steps': updatedSteps});
+        batch.update(doc.reference, {
+          'videoUrl': videoUrl,
+          'thumbnailUrl': thumbnailUrl,
+          'steps': updatedSteps,
+        });
         updated++;
       }
       await batch.commit();
@@ -122,14 +125,16 @@ class ExerciseSeeder {
       required String bodyArea,
       required String difficulty,
       required int duration,
-      required String videoId,
+      String videoId = '',
       required List<String> targetPainTypes,
       required List<String> steps,
     }) {
-      final url = videoId.isNotEmpty ? _yt(videoId) : '';
-      final thumb = videoId.isNotEmpty ? _thumb(videoId) : '';
-      final stepDur = steps.isNotEmpty ? duration ~/ steps.length : 30;
       final stepVideo = stepVideos['${bodyArea}_$difficulty'] ?? '';
+      final url = stepVideo;
+      final thumb = stepVideo.isNotEmpty
+          ? '${stepVideo.replaceFirst('f_mp4,q_auto', 'f_jpg,q_auto')}.jpg'
+          : '';
+      final stepDur = steps.isNotEmpty ? duration ~/ steps.length : 30;
       return {
         'title': title,
         'description': description,
