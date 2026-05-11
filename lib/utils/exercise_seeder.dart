@@ -28,6 +28,35 @@ class ExerciseSeeder {
   static List<Map<String, dynamic>> _exercises() {
     final now = Timestamp.now();
 
+    const cdnBase =
+        'https://res.cloudinary.com/dgq7kbqjg/video/upload/f_mp4,q_auto';
+    const stepVideos = {
+      // shoulder
+      'shoulder_easy':   '$cdnBase/physio/shoulder_easy',
+      'shoulder_medium': '$cdnBase/physio/shoulder_medium',
+      'shoulder_hard':   '$cdnBase/physio/shoulder_hard',
+      // lower_back
+      'lower_back_easy':   '$cdnBase/physio/lower_back',
+      'lower_back_medium': '$cdnBase/physio/lower_back',
+      'lower_back_hard':   '$cdnBase/physio/lower_back',
+      // knee
+      'knee_easy':   '$cdnBase/physio/knee_easy',
+      'knee_medium': '$cdnBase/physio/knee_medium',
+      'knee_hard':   '$cdnBase/physio/knee_hard',
+      // hip  (easy/medium reuse lunge; hard uses deadlift)
+      'hip_easy':   '$cdnBase/physio/knee_medium',
+      'hip_medium': '$cdnBase/physio/knee_medium',
+      'hip_hard':   '$cdnBase/physio/hip_hard',
+      // neck
+      'neck_easy':   '$cdnBase/physio/neck',
+      'neck_medium': '$cdnBase/physio/neck',
+      'neck_hard':   '$cdnBase/physio/neck',
+      // ankle
+      'ankle_easy':   '$cdnBase/physio/ankle',
+      'ankle_medium': '$cdnBase/physio/ankle',
+      'ankle_hard':   '$cdnBase/physio/ankle',
+    };
+
     Map<String, dynamic> ex({
       required String title,
       required String description,
@@ -41,6 +70,7 @@ class ExerciseSeeder {
       final url = videoId.isNotEmpty ? _yt(videoId) : '';
       final thumb = videoId.isNotEmpty ? _thumb(videoId) : '';
       final stepDur = steps.isNotEmpty ? duration ~/ steps.length : 30;
+      final stepVideo = stepVideos['${bodyArea}_$difficulty'] ?? '';
       return {
         'title': title,
         'description': description,
@@ -53,7 +83,7 @@ class ExerciseSeeder {
         'steps': steps
             .map((s) => {
                   'description': s,
-                  'videoUrl': '',
+                  'videoUrl': stepVideo,
                   'durationSeconds': stepDur,
                 })
             .toList(),
