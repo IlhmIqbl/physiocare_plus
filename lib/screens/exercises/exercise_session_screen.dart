@@ -81,7 +81,9 @@ class _ExerciseSessionScreenState extends State<ExerciseSessionScreen> {
           ),
         );
         controller.addListener(_onVideoUpdate);
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('Video load failed for step ${step.videoUrl}: $e');
+      }
     }
 
     if (mounted) setState(() => _videoInitializing = false);

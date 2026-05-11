@@ -218,18 +218,58 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         icon: const Icon(Icons.video_library_outlined),
                         label: const Text('Update Exercise Videos'),
                         onPressed: () async {
-                          final messenger = ScaffoldMessenger.of(context);
-                          messenger.showSnackBar(
-                            const SnackBar(content: Text('Updating video URLs...')),
-                          );
-                          final count = await ExerciseSeeder.updateStepVideos();
-                          if (context.mounted) {
-                            messenger.clearSnackBars();
-                            messenger.showSnackBar(
-                              SnackBar(
-                                content: Text('Updated $count exercises with Cloudinary video URLs'),
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (_) => const AlertDialog(
+                              content: Row(
+                                children: [
+                                  CircularProgressIndicator(),
+                                  SizedBox(width: 16),
+                                  Text('Updating video URLs…'),
+                                ],
                               ),
-                            );
+                            ),
+                          );
+                          try {
+                            final count = await ExerciseSeeder.updateStepVideos();
+                            if (context.mounted) {
+                              Navigator.of(context).pop();
+                              showDialog(
+                                context: context,
+                                builder: (_) => AlertDialog(
+                                  title: const Text('Videos Updated'),
+                                  content: Text(
+                                    count == 0
+                                        ? 'No exercises were updated.\n\nThis usually means exercises have not been seeded yet, or bodyArea/difficulty values do not match expected keys.\n\nTry tapping "Seed Sample Exercises" first, then update videos.'
+                                        : 'Successfully patched $count exercises with Cloudinary video URLs.\n\nOpen any exercise and start a session to see the inline video.',
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(),
+                                      child: const Text('OK'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              Navigator.of(context).pop();
+                              showDialog(
+                                context: context,
+                                builder: (_) => AlertDialog(
+                                  title: const Text('Update Failed'),
+                                  content: Text('Error: $e'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(),
+                                      child: const Text('OK'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
                           }
                         },
                       ),
