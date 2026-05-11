@@ -5,6 +5,65 @@ class ExerciseSeeder {
   static String _thumb(String id) =>
       'https://img.youtube.com/vi/$id/hqdefault.jpg';
 
+  static const _cdnBase =
+      'https://res.cloudinary.com/dgq7kbqjg/video/upload/f_mp4,q_auto';
+
+  static const _stepVideoMap = {
+    'shoulder_easy':    '$_cdnBase/physio/shoulder_easy',
+    'shoulder_medium':  '$_cdnBase/physio/shoulder_medium',
+    'shoulder_hard':    '$_cdnBase/physio/shoulder_hard',
+    'lower_back_easy':  '$_cdnBase/physio/lower_back',
+    'lower_back_medium':'$_cdnBase/physio/lower_back',
+    'lower_back_hard':  '$_cdnBase/physio/lower_back',
+    'knee_easy':        '$_cdnBase/physio/knee_easy',
+    'knee_medium':      '$_cdnBase/physio/knee_medium',
+    'knee_hard':        '$_cdnBase/physio/knee_hard',
+    'hip_easy':         '$_cdnBase/physio/knee_medium',
+    'hip_medium':       '$_cdnBase/physio/knee_medium',
+    'hip_hard':         '$_cdnBase/physio/hip_hard',
+    'neck_easy':        '$_cdnBase/physio/neck',
+    'neck_medium':      '$_cdnBase/physio/neck',
+    'neck_hard':        '$_cdnBase/physio/neck',
+    'ankle_easy':       '$_cdnBase/physio/ankle',
+    'ankle_medium':     '$_cdnBase/physio/ankle',
+    'ankle_hard':       '$_cdnBase/physio/ankle',
+  };
+
+  /// Patches videoUrl on every step of every existing exercise document.
+  /// Safe to run at any time — only overwrites the videoUrl field, nothing else.
+  static Future<int> updateStepVideos() async {
+    final db = FirebaseFirestore.instance;
+    final snapshot = await db.collection('exercises').get();
+    int updated = 0;
+
+    const batchSize = 400;
+    for (var i = 0; i < snapshot.docs.length; i += batchSize) {
+      final batch = db.batch();
+      final chunk = snapshot.docs.sublist(
+          i, (i + batchSize).clamp(0, snapshot.docs.length));
+      for (final doc in chunk) {
+        final data = doc.data();
+        final bodyArea = data['bodyArea'] as String? ?? '';
+        final difficulty = data['difficulty'] as String? ?? '';
+        final videoUrl =
+            _stepVideoMap['${bodyArea}_$difficulty'] ?? '';
+        if (videoUrl.isEmpty) continue;
+
+        final rawSteps = data['steps'] as List<dynamic>? ?? [];
+        final updatedSteps = rawSteps.map((s) {
+          final step = Map<String, dynamic>.from(s as Map);
+          step['videoUrl'] = videoUrl;
+          return step;
+        }).toList();
+
+        batch.update(doc.reference, {'steps': updatedSteps});
+        updated++;
+      }
+      await batch.commit();
+    }
+    return updated;
+  }
+
   static Future<void> seed() async {
     final db = FirebaseFirestore.instance;
 

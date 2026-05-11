@@ -211,6 +211,29 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         },
                       ),
                     ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.video_library_outlined),
+                        label: const Text('Update Exercise Videos'),
+                        onPressed: () async {
+                          final messenger = ScaffoldMessenger.of(context);
+                          messenger.showSnackBar(
+                            const SnackBar(content: Text('Updating video URLs...')),
+                          );
+                          final count = await ExerciseSeeder.updateStepVideos();
+                          if (context.mounted) {
+                            messenger.clearSnackBars();
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text('Updated $count exercises with Cloudinary video URLs'),
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                    ),
                     const SizedBox(height: 24),
                   ],
                 ),
