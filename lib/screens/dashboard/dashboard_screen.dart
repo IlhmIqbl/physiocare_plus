@@ -5,6 +5,7 @@ import 'package:physiocare/providers/auth_provider.dart';
 import 'package:physiocare/providers/plan_provider.dart';
 import 'package:physiocare/providers/progress_provider.dart';
 import 'package:physiocare/providers/exercise_provider.dart';
+import 'package:physiocare/providers/subscription_provider.dart';
 import 'package:physiocare/utils/app_constants.dart';
 import 'package:physiocare/screens/exercises/exercise_library_screen.dart';
 import 'package:physiocare/screens/progress/progress_screen.dart';
@@ -30,6 +31,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         context.read<ExerciseProvider>().loadExercises();
         context.read<ProgressProvider>().loadUserProgress(uid);
         context.read<PlanProvider>().loadUserPlans(uid);
+        // Start real-time subscription listener so premium features
+        // reflect immediately when admin grants/revokes premium
+        context.read<SubscriptionProvider>().listenToSubscription(uid);
       }
     });
   }

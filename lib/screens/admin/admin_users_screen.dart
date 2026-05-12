@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:physiocare/models/user_model.dart';
 import 'package:physiocare/services/firestore_service.dart';
+import 'package:physiocare/services/subscription_service.dart';
 
 class AdminUsersScreen extends StatefulWidget {
   const AdminUsersScreen({super.key});
@@ -11,6 +12,7 @@ class AdminUsersScreen extends StatefulWidget {
 
 class _AdminUsersScreenState extends State<AdminUsersScreen> {
   final _firestoreService = FirestoreService();
+  final _subscriptionService = SubscriptionService();
   final _searchController = TextEditingController();
 
   List<UserModel> _users = [];
@@ -65,6 +67,14 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     try {
       await _firestoreService
           .updateDoc('users', user.id, {'userType': newType});
+
+      // Keep subscriptions in sync so premium feature gates work immediately
+      if (newType == 'premium') {
+        await _subscriptionService.upgradeToPremium(user.id);
+      } else if (newType == 'freemium') {
+        await _subscriptionService.downgradeToFree(user.id);
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('${user.name} updated to $newType')),

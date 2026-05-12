@@ -12,14 +12,26 @@ class SubscriptionService {
 
   Future<void> upgradeToPremium(String userId) async {
     final now = DateTime.now();
-    await _db.collection('subscriptions').doc(userId).update({
+    // Use set() so it works even if no subscription doc exists yet
+    await _db.collection('subscriptions').doc(userId).set({
+      'userId': userId,
       'type': 'premium',
       'paymentStatus': 'active',
       'startDate': Timestamp.fromDate(now),
       'endDate': Timestamp.fromDate(
         DateTime(now.year + 1, now.month, now.day),
       ),
-    });
+    }, SetOptions(merge: true));
+  }
+
+  Future<void> downgradeToFree(String userId) async {
+    await _db.collection('subscriptions').doc(userId).set({
+      'userId': userId,
+      'type': 'free',
+      'paymentStatus': 'inactive',
+      'startDate': Timestamp.fromDate(DateTime.now()),
+      'endDate': null,
+    }, SetOptions(merge: true));
   }
 
   Future<bool> isPremium(String userId) async {
