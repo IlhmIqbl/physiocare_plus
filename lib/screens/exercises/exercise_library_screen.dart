@@ -13,12 +13,13 @@ class ExerciseLibraryScreen extends StatefulWidget {
 
 class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
   static const List<String> _bodyAreas = [
-    'shoulder',
-    'lower_back',
-    'knee',
-    'hip',
-    'neck',
     'ankle',
+    'elbow',
+    'hip',
+    'knee',
+    'low back',
+    'neck',
+    'shoulder',
   ];
 
   static const List<String> _difficulties = ['easy', 'medium', 'hard'];

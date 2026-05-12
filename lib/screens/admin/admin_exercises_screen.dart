@@ -20,12 +20,13 @@ class _AdminExercisesScreenState extends State<AdminExercisesScreen> {
   bool _isLoading = false;
 
   static const List<String> _bodyAreas = [
-    'neck',
-    'shoulder',
-    'back',
+    'ankle',
+    'elbow',
     'hip',
     'knee',
-    'ankle',
+    'low back',
+    'neck',
+    'shoulder',
   ];
 
   static const List<String> _difficulties = ['easy', 'medium', 'hard'];
@@ -228,14 +229,13 @@ class _ExerciseFormSheetState extends State<_ExerciseFormSheet> {
   late final TextEditingController _titleCtrl;
   late final TextEditingController _descCtrl;
   late final TextEditingController _videoUrlCtrl;
-  late final TextEditingController _thumbnailUrlCtrl;
   late final TextEditingController _durationCtrl;
 
   late String _bodyArea;
   late String _difficulty;
-  late bool _isActive;
 
-  final List<Map<String, TextEditingController>> _stepControllers = [];
+  // Each entry is one step description controller
+  final List<TextEditingController> _stepCtrls = [];
 
   @override
   void initState() {
@@ -244,43 +244,29 @@ class _ExerciseFormSheetState extends State<_ExerciseFormSheet> {
     _titleCtrl = TextEditingController(text: e?.title ?? '');
     _descCtrl = TextEditingController(text: e?.description ?? '');
     _videoUrlCtrl = TextEditingController(text: e?.videoUrl ?? '');
-    _thumbnailUrlCtrl = TextEditingController(text: e?.thumbnailUrl ?? '');
     _durationCtrl =
-        TextEditingController(text: e != null ? '${e.duration}' : '');
+        TextEditingController(text: e != null && e.duration > 0 ? '${e.duration}' : '');
     _bodyArea = e?.bodyArea ?? widget.bodyAreas.first;
     _difficulty = e?.difficulty ?? widget.difficulties.first;
-    _isActive = e?.isActive ?? true;
 
     if (e != null && e.steps.isNotEmpty) {
       for (final step in e.steps) {
-        _stepControllers.add({
-          'desc': TextEditingController(text: step.description),
-          'video': TextEditingController(text: step.videoUrl),
-          'dur': TextEditingController(text: '${step.durationSeconds}'),
-        });
+        _stepCtrls.add(TextEditingController(text: step.description));
       }
     } else {
-      _addStep();
+      _stepCtrls.add(TextEditingController());
     }
   }
 
   void _addStep() {
-    setState(() {
-      _stepControllers.add({
-        'desc': TextEditingController(),
-        'video': TextEditingController(),
-        'dur': TextEditingController(text: '30'),
-      });
-    });
+    setState(() => _stepCtrls.add(TextEditingController()));
   }
 
   void _removeStep(int index) {
-    if (_stepControllers.length <= 1) return;
+    if (_stepCtrls.length <= 1) return;
     setState(() {
-      final ctrls = _stepControllers.removeAt(index);
-      for (final c in ctrls.values) {
-        c.dispose();
-      }
+      _stepCtrls[index].dispose();
+      _stepCtrls.removeAt(index);
     });
   }
 
@@ -289,12 +275,9 @@ class _ExerciseFormSheetState extends State<_ExerciseFormSheet> {
     _titleCtrl.dispose();
     _descCtrl.dispose();
     _videoUrlCtrl.dispose();
-    _thumbnailUrlCtrl.dispose();
     _durationCtrl.dispose();
-    for (final ctrls in _stepControllers) {
-      for (final c in ctrls.values) {
-        c.dispose();
-      }
+    for (final c in _stepCtrls) {
+      c.dispose();
     }
     super.dispose();
   }
@@ -303,17 +286,19 @@ class _ExerciseFormSheetState extends State<_ExerciseFormSheet> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSaving = true);
     try {
-      final steps = _stepControllers
-          .map((ctrls) => ExerciseStep(
-                description: ctrls['desc']!.text.trim(),
-                videoUrl: ctrls['video']!.text.trim(),
-                durationSeconds:
-                    int.tryParse(ctrls['dur']!.text.trim()) ?? 30,
+      final videoUrl = _videoUrlCtrl.text.trim();
+      final duration = int.tryParse(_durationCtrl.text.trim()) ?? 0;
+
+      final steps = _stepCtrls
+          .map((c) => c.text.trim())
+          .where((desc) => desc.isNotEmpty)
+          .map((desc) => ExerciseStep(
+                description: desc,
+                videoUrl: videoUrl,
+                durationSeconds: 30,
               ))
-          .where((s) => s.description.isNotEmpty)
           .toList();
 
-      final duration = int.tryParse(_durationCtrl.text.trim()) ?? 0;
       final now = DateTime.now();
 
       if (widget.exercise == null) {
@@ -326,11 +311,11 @@ class _ExerciseFormSheetState extends State<_ExerciseFormSheet> {
           bodyArea: _bodyArea,
           difficulty: _difficulty,
           duration: duration,
-          videoUrl: _videoUrlCtrl.text.trim(),
-          thumbnailUrl: _thumbnailUrlCtrl.text.trim(),
+          videoUrl: videoUrl,
+          thumbnailUrl: '',
           targetPainTypes: const [],
           steps: steps,
-          isActive: _isActive,
+          isActive: true,
           createdAt: now,
         );
         await widget.exerciseService.addExercise(newExercise);
@@ -341,10 +326,8 @@ class _ExerciseFormSheetState extends State<_ExerciseFormSheet> {
           bodyArea: _bodyArea,
           difficulty: _difficulty,
           duration: duration,
-          videoUrl: _videoUrlCtrl.text.trim(),
-          thumbnailUrl: _thumbnailUrlCtrl.text.trim(),
+          videoUrl: videoUrl,
           steps: steps,
-          isActive: _isActive,
         );
         await widget.exerciseService.updateExercise(updated);
       }
@@ -386,6 +369,7 @@ class _ExerciseFormSheetState extends State<_ExerciseFormSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Header
               Row(
                 children: [
                   Text(
@@ -401,6 +385,8 @@ class _ExerciseFormSheetState extends State<_ExerciseFormSheet> {
                 ],
               ),
               const SizedBox(height: 12),
+
+              // Title
               TextFormField(
                 controller: _titleCtrl,
                 decoration: const InputDecoration(
@@ -409,30 +395,8 @@ class _ExerciseFormSheetState extends State<_ExerciseFormSheet> {
                     (v == null || v.trim().isEmpty) ? 'Required' : null,
               ),
               const SizedBox(height: 12),
-              TextFormField(
-                controller: _descCtrl,
-                decoration: const InputDecoration(
-                    labelText: 'Description',
-                    border: OutlineInputBorder()),
-                maxLines: 3,
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Required' : null,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _videoUrlCtrl,
-                decoration: const InputDecoration(
-                    labelText: 'Intro Video URL',
-                    border: OutlineInputBorder()),
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _thumbnailUrlCtrl,
-                decoration: const InputDecoration(
-                    labelText: 'Thumbnail URL',
-                    border: OutlineInputBorder()),
-              ),
-              const SizedBox(height: 12),
+
+              // Body area + difficulty
               Row(
                 children: [
                   Expanded(
@@ -473,21 +437,53 @@ class _ExerciseFormSheetState extends State<_ExerciseFormSheet> {
                 ],
               ),
               const SizedBox(height: 12),
+
+              // Video URL
+              TextFormField(
+                controller: _videoUrlCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Cloudinary Video URL',
+                  hintText: 'https://res.cloudinary.com/...',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.videocam_outlined),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Description
+              TextFormField(
+                controller: _descCtrl,
+                decoration: const InputDecoration(
+                    labelText: 'Description',
+                    border: OutlineInputBorder()),
+                maxLines: 3,
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'Required' : null,
+              ),
+              const SizedBox(height: 12),
+
+              // Duration
               TextFormField(
                 controller: _durationCtrl,
                 decoration: const InputDecoration(
-                    labelText: 'Total Duration (seconds)',
-                    border: OutlineInputBorder()),
+                  labelText: 'Duration (seconds)',
+                  hintText: 'e.g. 300 for 5 minutes',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.timer_outlined),
+                ),
                 keyboardType: TextInputType.number,
                 validator: (v) {
-                  if (v == null || v.trim().isEmpty) return 'Required';
-                  if (int.tryParse(v.trim()) == null) {
-                    return 'Enter a valid number';
+                  if (v != null &&
+                      v.trim().isNotEmpty &&
+                      int.tryParse(v.trim()) == null) {
+                    return 'Enter a whole number';
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 16),
+
+              // Steps
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -501,72 +497,55 @@ class _ExerciseFormSheetState extends State<_ExerciseFormSheet> {
                   ),
                 ],
               ),
-              ..._stepControllers.asMap().entries.map((entry) {
+              ..._stepCtrls.asMap().entries.map((entry) {
                 final i = entry.key;
-                final ctrls = entry.value;
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text('Step ${i + 1}',
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold)),
-                            const Spacer(),
-                            IconButton(
-                              icon: const Icon(
-                                  Icons.remove_circle_outline,
-                                  color: Colors.red,
-                                  size: 20),
-                              onPressed: () => _removeStep(i),
-                            ),
-                          ],
+                final ctrl = entry.value;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 28,
+                        height: 28,
+                        margin:
+                            const EdgeInsets.only(top: 14, right: 8),
+                        decoration: const BoxDecoration(
+                          color: Colors.teal,
+                          shape: BoxShape.circle,
                         ),
-                        const SizedBox(height: 8),
-                        TextFormField(
-                          controller: ctrls['desc'],
-                          decoration: const InputDecoration(
-                              labelText: 'Description',
-                              border: OutlineInputBorder()),
-                          maxLines: 2,
-                        ),
-                        const SizedBox(height: 8),
-                        TextFormField(
-                          controller: ctrls['video'],
-                          decoration: const InputDecoration(
-                            labelText: 'Cloudinary Video URL',
-                            border: OutlineInputBorder(),
-                            hintText: 'https://res.cloudinary.com/...',
+                        child: Center(
+                          child: Text(
+                            '${i + 1}',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold),
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        TextFormField(
-                          controller: ctrls['dur'],
+                      ),
+                      Expanded(
+                        child: TextFormField(
+                          controller: ctrl,
                           decoration: const InputDecoration(
-                              labelText: 'Duration (seconds)',
-                              border: OutlineInputBorder()),
-                          keyboardType: TextInputType.number,
+                            labelText: 'Step description',
+                            border: OutlineInputBorder(),
+                          ),
+                          maxLines: 2,
                         ),
-                      ],
-                    ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.remove_circle_outline,
+                            color: Colors.red, size: 22),
+                        onPressed: () => _removeStep(i),
+                      ),
+                    ],
                   ),
                 );
               }),
-              const SizedBox(height: 12),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Active'),
-                subtitle: const Text(
-                    'Inactive exercises won\'t appear to users'),
-                value: _isActive,
-                activeThumbColor: Colors.teal,
-                onChanged: (v) => setState(() => _isActive = v),
-              ),
               const SizedBox(height: 16),
+
+              // Save
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -585,9 +564,7 @@ class _ExerciseFormSheetState extends State<_ExerciseFormSheet> {
                           child: CircularProgressIndicator(
                               color: Colors.white, strokeWidth: 2),
                         )
-                      : Text(isEditing
-                          ? 'Update Exercise'
-                          : 'Add Exercise'),
+                      : Text(isEditing ? 'Update Exercise' : 'Add Exercise'),
                 ),
               ),
             ],

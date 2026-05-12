@@ -23,10 +23,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
       final uid = authProvider.userModel?.id ?? '';
       if (uid.isNotEmpty) {
         final progressProvider = context.read<ProgressProvider>();
-        if (progressProvider.sessions.isEmpty &&
-            progressProvider.progressEntries.isEmpty) {
-          progressProvider.loadUserProgress(uid);
-        }
+        progressProvider.loadUserProgress(uid);
       }
     });
   }

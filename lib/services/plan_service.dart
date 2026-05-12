@@ -33,10 +33,15 @@ class PlanService {
     final now = DateTime.now();
     final docRef = _db.collection('recovery_plans').doc();
 
+    final titleArea = bodyArea
+        .split(RegExp(r'[ _]'))
+        .map((w) => w.isEmpty ? '' : w[0].toUpperCase() + w.substring(1))
+        .join(' ');
+
     final plan = RecoveryPlanModel(
       id: docRef.id,
       userId: userId,
-      title: '$bodyArea Recovery Plan',
+      title: '$titleArea Recovery Plan',
       bodyArea: bodyArea,
       painSeverity: painSeverity,
       exerciseIds: exerciseIds,

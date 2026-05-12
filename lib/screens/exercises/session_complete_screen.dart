@@ -8,13 +8,19 @@ class SessionCompleteScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final args =
         ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
-    final stepsCompleted = args['stepsCompleted'] as int;
-    final totalSteps = args['totalSteps'] as int;
     final elapsedSeconds = args['elapsedSeconds'] as int;
     final exerciseTitle = args['exerciseTitle'] as String;
+    final durationSeconds = args['durationSeconds'] as int? ?? 0;
 
     final m = elapsedSeconds ~/ 60;
     final s = (elapsedSeconds % 60).toString().padLeft(2, '0');
+
+    String durationLabel = 'N/A';
+    if (durationSeconds > 0) {
+      final dm = durationSeconds ~/ 60;
+      final ds = (durationSeconds % 60).toString().padLeft(2, '0');
+      durationLabel = '${dm}m ${ds}s';
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xFFE0F2F1),
@@ -42,9 +48,7 @@ class SessionCompleteScreen extends StatelessWidget {
                 style: const TextStyle(fontSize: 16, color: Colors.grey),
               ),
               const SizedBox(height: 32),
-              _StatRow(
-                  label: 'Steps completed',
-                  value: '$stepsCompleted / $totalSteps'),
+              _StatRow(label: 'Exercise duration', value: durationLabel),
               const SizedBox(height: 12),
               _StatRow(label: 'Time taken', value: '${m}m ${s}s'),
               const SizedBox(height: 48),

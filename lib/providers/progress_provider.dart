@@ -56,13 +56,18 @@ class ProgressProvider extends ChangeNotifier {
 
   Future<String> startSession(SessionModel session) async {
     final id = await _progressService.startSession(session);
+    final saved = session.copyWith(id: id);
+    _sessions = [saved, ..._sessions];
     notifyListeners();
     return id;
   }
 
   Future<void> completeSession(
-      String sessionId, DateTime completedAt, int totalSteps) async {
-    await _progressService.completeSession(sessionId, completedAt, totalSteps);
+      String sessionId, DateTime completedAt, int totalSteps,
+      {int? painLevel, String? painNote}) async {
+    await _progressService.completeSession(
+        sessionId, completedAt, totalSteps,
+        painLevel: painLevel, painNote: painNote);
     final index = _sessions.indexWhere((s) => s.id == sessionId);
     if (index != -1) {
       _sessions[index] = _sessions[index].copyWith(

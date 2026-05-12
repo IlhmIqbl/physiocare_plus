@@ -7,8 +7,15 @@ import 'package:physiocare/providers/auth_provider.dart';
 import 'package:physiocare/widgets/video_player_widget.dart';
 import 'package:physiocare/utils/app_constants.dart';
 
-class ExerciseDetailScreen extends StatelessWidget {
+class ExerciseDetailScreen extends StatefulWidget {
   const ExerciseDetailScreen({super.key});
+
+  @override
+  State<ExerciseDetailScreen> createState() => _ExerciseDetailScreenState();
+}
+
+class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
+  bool _isStarting = false;
 
   Color _difficultyColor(String difficulty) {
     switch (difficulty.toLowerCase()) {
@@ -20,6 +27,59 @@ class ExerciseDetailScreen extends StatelessWidget {
         return Colors.red;
       default:
         return Colors.grey;
+    }
+  }
+
+  Future<void> _startExercise(ExerciseModel exercise) async {
+    if (_isStarting) return;
+    setState(() => _isStarting = true);
+
+    try {
+      final authProvider = context.read<AppAuthProvider>();
+      final progressProvider = context.read<ProgressProvider>();
+
+      final userId = authProvider.userModel?.id ?? '';
+      if (userId.isEmpty) {
+        throw Exception('User not logged in. Please sign in and try again.');
+      }
+
+      final session = SessionModel(
+        id: '',
+        userId: userId,
+        exerciseId: exercise.id,
+        exerciseTitle: exercise.title,
+        startedAt: DateTime.now(),
+        durationSeconds: exercise.duration,
+        completed: false,
+        totalSteps: exercise.steps.length,
+        stepsCompleted: 0,
+        status: 'in_progress',
+        completionPercent: 0.0,
+      );
+
+      final sessionId = await progressProvider.startSession(session);
+
+      if (!mounted) return;
+
+      Navigator.pushNamed(
+        context,
+        AppRoutes.exerciseSession,
+        arguments: {
+          'exercise': exercise,
+          'sessionId': sessionId,
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not start session: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isStarting = false);
     }
   }
 
@@ -38,7 +98,7 @@ class ExerciseDetailScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Video player
+            // Video preview
             VideoPlayerWidget(videoUrl: exercise.videoUrl),
 
             Padding(
@@ -65,11 +125,10 @@ class ExerciseDetailScreen extends StatelessWidget {
                           exercise.difficulty[0].toUpperCase() +
                               exercise.difficulty.substring(1),
                           style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                          ),
+                              color: Colors.white, fontSize: 12),
                         ),
-                        backgroundColor: _difficultyColor(exercise.difficulty),
+                        backgroundColor:
+                            _difficultyColor(exercise.difficulty),
                         padding: EdgeInsets.zero,
                       ),
                     ],
@@ -79,14 +138,18 @@ class ExerciseDetailScreen extends StatelessWidget {
                   // Duration + body area
                   Row(
                     children: [
-                      const Icon(Icons.timer, size: 16, color: Colors.grey),
+                      const Icon(Icons.timer,
+                          size: 16, color: Colors.grey),
                       const SizedBox(width: 4),
                       Text(
-                        '${exercise.duration ~/ 60} min',
+                        exercise.duration > 0
+                            ? '${exercise.duration ~/ 60} min'
+                            : 'No duration set',
                         style: const TextStyle(color: Colors.grey),
                       ),
                       const SizedBox(width: 16),
-                      const Icon(Icons.place, size: 16, color: Colors.grey),
+                      const Icon(Icons.place,
+                          size: 16, color: Colors.grey),
                       const SizedBox(width: 4),
                       Text(
                         exercise.bodyArea.isNotEmpty
@@ -99,7 +162,7 @@ class ExerciseDetailScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
 
-                  // Body area chip + target pain types chips
+                  // Body area chip + target pain types
                   Wrap(
                     spacing: 8,
                     runSpacing: 4,
@@ -111,19 +174,15 @@ class ExerciseDetailScreen extends StatelessWidget {
                                   exercise.bodyArea.substring(1)
                               : exercise.bodyArea,
                           style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                          ),
+                              color: Colors.white, fontSize: 12),
                         ),
                         backgroundColor: AppColors.primary,
                         padding: EdgeInsets.zero,
                       ),
                       ...exercise.targetPainTypes.map(
                         (pt) => Chip(
-                          label: Text(
-                            pt,
-                            style: const TextStyle(fontSize: 12),
-                          ),
+                          label: Text(pt,
+                              style: const TextStyle(fontSize: 12)),
                           backgroundColor: Colors.grey.shade200,
                           padding: EdgeInsets.zero,
                         ),
@@ -136,42 +195,43 @@ class ExerciseDetailScreen extends StatelessWidget {
                   const Text(
                     'Description',
                     style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
+                        fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    exercise.description,
+                    exercise.description.isNotEmpty
+                        ? exercise.description
+                        : 'No description provided.',
                     style: const TextStyle(color: Colors.grey),
                   ),
                   const SizedBox(height: 16),
 
                   // Steps
-                  const Text(
-                    'Steps',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
+                  if (exercise.steps.isNotEmpty) ...[
+                    const Text(
+                      'Steps',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 16),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: exercise.steps.length,
-                    itemBuilder: (context, index) {
-                      return ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          child: Text('${index + 1}'),
-                        ),
-                        title: Text(exercise.steps[index].description),
-                        contentPadding: EdgeInsets.zero,
-                      );
-                    },
-                  ),
+                    const SizedBox(height: 8),
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: exercise.steps.length,
+                      itemBuilder: (context, index) {
+                        return ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            child: Text('${index + 1}'),
+                          ),
+                          title: Text(
+                              exercise.steps[index].description),
+                          contentPadding: EdgeInsets.zero,
+                        );
+                      },
+                    ),
+                  ],
                   const SizedBox(height: 24),
 
                   // Start Exercise button
@@ -181,49 +241,23 @@ class ExerciseDetailScreen extends StatelessWidget {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        padding:
+                            const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
                       ),
-                      onPressed: () async {
-                        final authProvider =
-                            context.read<AppAuthProvider>();
-                        final progressProvider =
-                            context.read<ProgressProvider>();
-
-                        final userId =
-                            authProvider.userModel?.id ?? '';
-
-                        final session = SessionModel(
-                          id: '',
-                          userId: userId,
-                          exerciseId: exercise.id,
-                          exerciseTitle: exercise.title,
-                          startedAt: DateTime.now(),
-                          durationSeconds: exercise.duration,
-                          completed: false,
-                          totalSteps: exercise.steps.length,
-                          stepsCompleted: 0,
-                          status: 'in_progress',
-                          completionPercent: 0.0,
-                        );
-
-                        final sessionId =
-                            await progressProvider.startSession(session);
-
-                        if (context.mounted) {
-                          Navigator.pushNamed(
-                            context,
-                            AppRoutes.exerciseSession,
-                            arguments: {
-                              'exercise': exercise,
-                              'sessionId': sessionId,
-                            },
-                          );
-                        }
-                      },
-                      child: const Text(
-                        'Start Exercise',
-                        style: TextStyle(fontSize: 16),
-                      ),
+                      onPressed: _isStarting
+                          ? null
+                          : () => _startExercise(exercise),
+                      child: _isStarting
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                  color: Colors.white, strokeWidth: 2),
+                            )
+                          : const Text('Start Exercise',
+                              style: TextStyle(fontSize: 16)),
                     ),
                   ),
                 ],

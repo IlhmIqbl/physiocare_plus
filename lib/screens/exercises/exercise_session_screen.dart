@@ -4,9 +4,9 @@ import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import 'package:physiocare/models/exercise_model.dart';
-import 'package:physiocare/models/exercise_step_model.dart';
 import 'package:physiocare/providers/progress_provider.dart';
 import 'package:physiocare/widgets/pain_stop_dialog.dart';
+import 'package:physiocare/widgets/exercise_review_dialog.dart';
 import 'package:physiocare/utils/app_constants.dart';
 
 class ExerciseSessionScreen extends StatefulWidget {
@@ -22,10 +22,10 @@ class _ExerciseSessionScreenState extends State<ExerciseSessionScreen> {
   late String _sessionId;
   late DateTime _sessionStart;
 
-  int _currentStepIndex = 0;
-  Timer? _countdownTimer;
+  int _totalSeconds = 0;
+  int _remainingSeconds = 0;
+  Timer? _timer;
 
-  // Video is loaded ONCE from exercise.videoUrl and loops throughout
   VideoPlayerController? _videoController;
   ChewieController? _chewieController;
   bool _videoInitializing = false;
@@ -41,18 +41,19 @@ class _ExerciseSessionScreenState extends State<ExerciseSessionScreen> {
       _exercise = args['exercise'] as ExerciseModel;
       _sessionId = args['sessionId'] as String;
       _sessionStart = DateTime.now();
+      _totalSeconds = _exercise.duration > 0 ? _exercise.duration : 0;
+      _remainingSeconds = _totalSeconds;
       _argsInitialized = true;
       _initVideo();
     }
   }
 
-  ExerciseStep get _currentStep => _exercise.steps[_currentStepIndex];
-
-  /// Loads exercise.videoUrl once and loops it for the entire session.
-  /// Never reloaded between steps — the video stays in place.
   Future<void> _initVideo() async {
     final url = _exercise.videoUrl;
-    if (url.isEmpty) return;
+    if (url.isEmpty) {
+      if (_totalSeconds > 0) _startTimer();
+      return;
+    }
 
     setState(() => _videoInitializing = true);
     try {
@@ -76,46 +77,63 @@ class _ExerciseSessionScreenState extends State<ExerciseSessionScreen> {
     } catch (e) {
       debugPrint('Exercise video failed to load: $e');
     }
-    if (mounted) setState(() => _videoInitializing = false);
-  }
-
-  void _goToStep(int index) {
-    _countdownTimer?.cancel();
-    setState(() => _currentStepIndex = index);
-    // Video keeps playing — no reload
-  }
-
-  void _advanceStep() {
-    if (_currentStepIndex < _exercise.steps.length - 1) {
-      _goToStep(_currentStepIndex + 1);
-    } else {
-      _completeSession();
+    if (mounted) {
+      setState(() => _videoInitializing = false);
+      if (_totalSeconds > 0) _startTimer();
     }
   }
 
-  Future<void> _completeSession() async {
-    _countdownTimer?.cancel();
+  void _startTimer() {
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (_remainingSeconds <= 1) {
+        _timer?.cancel();
+        setState(() => _remainingSeconds = 0);
+        _onTimerComplete();
+      } else {
+        setState(() => _remainingSeconds--);
+      }
+    });
+  }
+
+  Future<void> _onTimerComplete() async {
+    _videoController?.pause();
+    final result = await showDialog<ExerciseReviewResult>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const ExerciseReviewDialog(),
+    );
+    if (!mounted) return;
+    await _finishSession(result?.painLevel, result?.painNote);
+  }
+
+  Future<void> _finishSession(int? painLevel, String? painNote) async {
+    _timer?.cancel();
     _disposeVideo();
     final elapsed = DateTime.now().difference(_sessionStart).inSeconds;
-    final total = _exercise.steps.length;
     final progressProvider = context.read<ProgressProvider>();
-    await progressProvider.completeSession(_sessionId, DateTime.now(), total);
+    await progressProvider.completeSession(
+      _sessionId,
+      DateTime.now(),
+      _exercise.steps.length,
+      painLevel: painLevel,
+      painNote: painNote,
+    );
     if (mounted) {
       Navigator.pushReplacementNamed(
         context,
         AppRoutes.sessionComplete,
         arguments: {
-          'stepsCompleted': total,
-          'totalSteps': total,
           'elapsedSeconds': elapsed,
           'exerciseTitle': _exercise.title,
+          'durationSeconds': _totalSeconds,
         },
       );
     }
   }
 
   Future<void> _onPainPressed() async {
-    _countdownTimer?.cancel();
+    _timer?.cancel();
     _videoController?.pause();
 
     final progressProvider = context.read<ProgressProvider>();
@@ -129,12 +147,20 @@ class _ExerciseSessionScreenState extends State<ExerciseSessionScreen> {
 
     if (result == null || !result.shouldStop) {
       _videoController?.play();
+      if (_remainingSeconds > 0) _startTimer();
       return;
     }
 
+    final elapsed = _totalSeconds - _remainingSeconds;
+    final stoppedAt = _totalSeconds > 0 && _exercise.steps.isNotEmpty
+        ? (elapsed / _totalSeconds * _exercise.steps.length)
+            .round()
+            .clamp(0, _exercise.steps.length)
+        : 0;
+
     await progressProvider.stopSession(
       sessionId: _sessionId,
-      stepsCompleted: _currentStepIndex,
+      stepsCompleted: stoppedAt,
       totalSteps: _exercise.steps.length,
       painLevel: result.painLevel,
       painNote: result.painNote,
@@ -152,20 +178,27 @@ class _ExerciseSessionScreenState extends State<ExerciseSessionScreen> {
 
   @override
   void dispose() {
-    _countdownTimer?.cancel();
+    _timer?.cancel();
     _disposeVideo();
     super.dispose();
   }
 
+  String _formatTime(int seconds) {
+    final m = seconds ~/ 60;
+    final s = (seconds % 60).toString().padLeft(2, '0');
+    return '$m:$s';
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (!_argsInitialized || _exercise.steps.isEmpty) {
+    if (!_argsInitialized) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    final total = _exercise.steps.length;
-    final progress = ((_currentStepIndex + 1) / total).clamp(0.0, 1.0);
-    final isLastStep = _currentStepIndex == total - 1;
+    final timerProgress = _totalSeconds > 0
+        ? 1.0 - (_remainingSeconds / _totalSeconds)
+        : 0.0;
+    final isLow = _remainingSeconds <= 10 && _remainingSeconds > 0;
 
     return Scaffold(
       appBar: AppBar(
@@ -177,79 +210,134 @@ class _ExerciseSessionScreenState extends State<ExerciseSessionScreen> {
         onPressed: _onPainPressed,
         backgroundColor: Colors.red,
         icon: const Icon(Icons.warning_amber_rounded, color: Colors.white),
-        label:
-            const Text("I'm in pain", style: TextStyle(color: Colors.white)),
+        label: const Text("I'm in pain",
+            style: TextStyle(color: Colors.white)),
       ),
       body: Column(
         children: [
-          // ── Video slot — loads once, loops throughout ──────────────────
+          // ── Video — loads once, loops throughout ──────────────────────
           _buildVideoSection(),
 
-          // ── Step header + progress ─────────────────────────────────────
+          // ── Timer ────────────────────────────────────────────────────
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Step ${_currentStepIndex + 1} of $total',
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                Text(
-                  '${(progress * 100).round()}% complete',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            child: LinearProgressIndicator(
-              value: progress,
-              backgroundColor: Colors.grey.shade300,
-              color: AppColors.primary,
-              minHeight: 8,
-              borderRadius: BorderRadius.circular(4),
-            ),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: _totalSeconds == 0
+                ? SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _onTimerComplete,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding:
+                            const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                      ),
+                      child: const Text('Finish Exercise',
+                          style: TextStyle(fontSize: 16)),
+                    ),
+                  )
+                : Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment:
+                            MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.timer,
+                                  color: isLow
+                                      ? Colors.red
+                                      : AppColors.primary,
+                                  size: 20),
+                              const SizedBox(width: 6),
+                              const Text(
+                                'Time Remaining',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            _formatTime(_remainingSeconds),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 24,
+                              color: isLow
+                                  ? Colors.red
+                                  : AppColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      LinearProgressIndicator(
+                        value: timerProgress,
+                        backgroundColor: Colors.grey.shade300,
+                        color:
+                            isLow ? Colors.red : AppColors.primary,
+                        minHeight: 8,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ],
+                  ),
           ),
 
-          // ── Step description ───────────────────────────────────────────
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: Text(
-                _currentStep.description,
-                style: const TextStyle(fontSize: 16, height: 1.6),
-              ),
-            ),
-          ),
-
-          // ── Navigation button (always visible) ────────────────────────
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _advanceStep,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                  ),
-                  child: Text(
-                    isLastStep ? 'Finish' : 'Next Step',
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                ),
-              ),
-            ),
-          ),
+          // ── Step instructions (read-only reference) ───────────────
+          Expanded(child: _buildStepsList()),
         ],
       ),
+    );
+  }
+
+  Widget _buildStepsList() {
+    if (_exercise.steps.isEmpty) {
+      return const Center(
+        child: Text('No instructions provided.',
+            style: TextStyle(color: Colors.grey)),
+      );
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
+      itemCount: _exercise.steps.length,
+      itemBuilder: (context, index) {
+        final step = _exercise.steps[index];
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 24,
+                height: 24,
+                margin: const EdgeInsets.only(top: 2, right: 10),
+                decoration: const BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    '${index + 1}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Text(
+                  step.description,
+                  style: const TextStyle(fontSize: 15, height: 1.5),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -259,8 +347,8 @@ class _ExerciseSessionScreenState extends State<ExerciseSessionScreen> {
         aspectRatio: 16 / 9,
         child: Container(
           color: AppColors.primary,
-          child:
-              const Center(child: CircularProgressIndicator(color: Colors.white)),
+          child: const Center(
+              child: CircularProgressIndicator(color: Colors.white)),
         ),
       );
     }
@@ -270,7 +358,6 @@ class _ExerciseSessionScreenState extends State<ExerciseSessionScreen> {
         child: Chewie(controller: _chewieController!),
       );
     }
-    // No video uploaded yet
     return AspectRatio(
       aspectRatio: 16 / 9,
       child: Container(

@@ -20,7 +20,8 @@ class ProgressService {
   }
 
   Future<void> completeSession(
-      String sessionId, DateTime completedAt, int totalSteps) async {
+      String sessionId, DateTime completedAt, int totalSteps,
+      {int? painLevel, String? painNote}) async {
     await _db.collection('sessions').doc(sessionId).update({
       'completed': true,
       'completedAt': Timestamp.fromDate(completedAt),
@@ -28,6 +29,8 @@ class ProgressService {
       'stepsCompleted': totalSteps,
       'totalSteps': totalSteps,
       'completionPercent': 100.0,
+      'painLevel': painLevel,
+      'painNote': painNote,
     });
   }
 

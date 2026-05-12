@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:physiocare/models/exercise_model.dart';
 import 'package:physiocare/models/recovery_plan_model.dart';
 import 'package:physiocare/providers/auth_provider.dart';
 import 'package:physiocare/providers/exercise_provider.dart';
@@ -16,12 +17,13 @@ class RecoveryPlanScreen extends StatefulWidget {
 
 class _RecoveryPlanScreenState extends State<RecoveryPlanScreen> {
   static const List<String> _bodyAreas = [
-    'shoulder',
-    'lower_back',
-    'knee',
-    'hip',
-    'neck',
     'ankle',
+    'elbow',
+    'hip',
+    'knee',
+    'low back',
+    'neck',
+    'shoulder',
   ];
 
   String? _selectedBodyArea;
@@ -32,37 +34,35 @@ class _RecoveryPlanScreenState extends State<RecoveryPlanScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final uid =
-          context.read<AppAuthProvider>().userModel?.id;
+      final uid = context.read<AppAuthProvider>().userModel?.id;
       if (uid != null) {
         context.read<PlanProvider>().loadUserPlans(uid);
       }
+      // Ensure exercises are loaded so we can resolve IDs when starting a plan
+      final ep = context.read<ExerciseProvider>();
+      if (ep.allExercises.isEmpty) ep.loadExercises();
     });
   }
 
-  /// Returns a display-friendly label for a body area key.
-  String _formatBodyArea(String area) {
+  String _formatArea(String area) {
     return area
-        .split('_')
-        .map((word) =>
-            word.isEmpty ? '' : word[0].toUpperCase() + word.substring(1))
+        .split(RegExp(r'[ _]'))
+        .map((w) => w.isEmpty ? '' : w[0].toUpperCase() + w.substring(1))
         .join(' ');
   }
 
-  /// Returns the difficulty label and colour that matches the current severity.
   ({String text, Color color}) get _difficultyHint {
     if (_painSeverity >= 7) {
-      return (text: 'Exercises: Easy (for high pain)', color: Colors.green);
+      return (text: 'Focus: Easy exercises (high pain)', color: Colors.green);
     } else if (_painSeverity >= 4) {
-      return (text: 'Exercises: Medium difficulty', color: Colors.orange);
+      return (text: 'Focus: Medium exercises', color: Colors.orange);
     } else {
-      return (text: 'Exercises: Hard (for low pain)', color: Colors.red);
+      return (text: 'Focus: Hard exercises (low pain)', color: Colors.red);
     }
   }
 
   Future<void> _generatePlan(PlanProvider planProvider, String uid) async {
     if (_selectedBodyArea == null) return;
-
     setState(() => _isGenerating = true);
     try {
       await planProvider.generatePlan(
@@ -75,6 +75,33 @@ class _RecoveryPlanScreenState extends State<RecoveryPlanScreen> {
     }
   }
 
+  void _startPlan(RecoveryPlanModel plan) {
+    final ep = context.read<ExerciseProvider>();
+    final exercises = plan.exerciseIds
+        .map((id) => ep.getExerciseById(id))
+        .whereType<ExerciseModel>()
+        .toList();
+
+    if (exercises.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'Exercises not loaded yet — please wait a moment and try again.'),
+        ),
+      );
+      return;
+    }
+
+    Navigator.pushNamed(
+      context,
+      AppRoutes.planPlayer,
+      arguments: {
+        'exercises': exercises,
+        'planTitle': plan.title,
+      },
+    );
+  }
+
   Future<void> _confirmDelete(
       BuildContext context, PlanProvider planProvider, String planId) async {
     final confirmed = await showDialog<bool>(
@@ -82,7 +109,7 @@ class _RecoveryPlanScreenState extends State<RecoveryPlanScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Delete Plan'),
         content: const Text(
-            'Are you sure you want to delete this recovery plan? This action cannot be undone.'),
+            'Are you sure you want to delete this recovery plan?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -96,10 +123,7 @@ class _RecoveryPlanScreenState extends State<RecoveryPlanScreen> {
         ],
       ),
     );
-
-    if (confirmed == true) {
-      await planProvider.deletePlan(planId);
-    }
+    if (confirmed == true) await planProvider.deletePlan(planId);
   }
 
   @override
@@ -109,6 +133,7 @@ class _RecoveryPlanScreenState extends State<RecoveryPlanScreen> {
       child: Scaffold(
         appBar: AppBar(
           backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
           title: const Text('Recovery Plan'),
           bottom: const TabBar(
             labelColor: Colors.white,
@@ -123,11 +148,10 @@ class _RecoveryPlanScreenState extends State<RecoveryPlanScreen> {
         body: Consumer2<AppAuthProvider, PlanProvider>(
           builder: (context, authProvider, planProvider, _) {
             final uid = authProvider.userModel?.id;
-
             return TabBarView(
               children: [
-                _buildCreatePlanTab(context, planProvider, uid),
-                _buildPlanHistoryTab(context, planProvider),
+                _buildCreateTab(context, planProvider, uid),
+                _buildHistoryTab(context, planProvider),
               ],
             );
           },
@@ -137,10 +161,10 @@ class _RecoveryPlanScreenState extends State<RecoveryPlanScreen> {
   }
 
   // ---------------------------------------------------------------------------
-  // Tab 1 — Create Plan
+  // Tab 1 — Create
   // ---------------------------------------------------------------------------
 
-  Widget _buildCreatePlanTab(
+  Widget _buildCreateTab(
       BuildContext context, PlanProvider planProvider, String? uid) {
     final hint = _difficultyHint;
 
@@ -149,27 +173,30 @@ class _RecoveryPlanScreenState extends State<RecoveryPlanScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
 
-          // Body area selection
+          // Body area chips
           const Text(
             'Select Body Area',
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: _bodyAreas.map((area) {
               final isSelected = _selectedBodyArea == area;
               return ChoiceChip(
-                label: Text(_formatBodyArea(area)),
+                label: Text(_formatArea(area)),
                 selected: isSelected,
                 selectedColor: AppColors.primary,
                 labelStyle: TextStyle(
-                  color: isSelected ? Colors.white : AppColors.textPrimary,
-                  fontWeight:
-                      isSelected ? FontWeight.w600 : FontWeight.normal,
+                  color: isSelected
+                      ? Colors.white
+                      : AppColors.textPrimary,
+                  fontWeight: isSelected
+                      ? FontWeight.w600
+                      : FontWeight.normal,
                 ),
                 onSelected: (_) =>
                     setState(() => _selectedBodyArea = area),
@@ -179,7 +206,7 @@ class _RecoveryPlanScreenState extends State<RecoveryPlanScreen> {
 
           const SizedBox(height: 24),
 
-          // Pain severity slider
+          // Pain severity
           const Text(
             'Pain Severity',
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
@@ -190,69 +217,99 @@ class _RecoveryPlanScreenState extends State<RecoveryPlanScreen> {
             onChanged: (v) => setState(() => _painSeverity = v),
             label: 'Pain Severity',
           ),
-          const SizedBox(height: 8),
-
-          // Difficulty hint
+          const SizedBox(height: 6),
           Text(
             hint.text,
             style: TextStyle(
-              color: hint.color,
-              fontWeight: FontWeight.w600,
-              fontSize: 14,
-            ),
+                color: hint.color,
+                fontWeight: FontWeight.w600,
+                fontSize: 13),
           ),
 
-          const SizedBox(height: 32),
+          const SizedBox(height: 28),
 
           // Generate button
           SizedBox(
             width: double.infinity,
-            child: ElevatedButton(
-              onPressed: (_selectedBodyArea == null || _isGenerating || uid == null)
-                  ? null
-                  : () => _generatePlan(planProvider, uid),
-              child: _isGenerating
+            child: ElevatedButton.icon(
+              icon: const Icon(Icons.auto_fix_high, size: 18),
+              label: _isGenerating
                   ? const SizedBox(
-                      height: 20,
-                      width: 20,
+                      height: 18,
+                      width: 18,
                       child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
+                          color: Colors.white, strokeWidth: 2),
                     )
                   : const Text('Generate Recovery Plan'),
+              onPressed: (_selectedBodyArea == null ||
+                      _isGenerating ||
+                      uid == null)
+                  ? null
+                  : () => _generatePlan(planProvider, uid),
             ),
           ),
 
           const SizedBox(height: 24),
 
-          // Active plan card
+          // Active plan
           if (planProvider.activePlan != null)
-            _buildActivePlanCard(context, planProvider.activePlan!),
+            _buildActivePlanCard(planProvider.activePlan!),
         ],
       ),
     );
   }
 
-  Widget _buildActivePlanCard(
-      BuildContext context, RecoveryPlanModel plan) {
+  Widget _buildActivePlanCard(RecoveryPlanModel plan) {
+    final ep = context.read<ExerciseProvider>();
+    final exercises = plan.exerciseIds
+        .map((id) => ep.getExerciseById(id))
+        .whereType<ExerciseModel>()
+        .toList();
+
+    final diffLabel = _diffLabelFor(plan.painSeverity);
+    final diffColor = _diffColorFor(plan.painSeverity);
+
     return Card(
+      elevation: 2,
       clipBehavior: Clip.antiAlias,
+      shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Teal header
+          // Header
           Container(
             width: double.infinity,
             color: AppColors.primary,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Text(
-              plan.title,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    plan.title,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: diffColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    diffLabel,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
             ),
           ),
 
@@ -261,78 +318,100 @@ class _RecoveryPlanScreenState extends State<RecoveryPlanScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Body area + severity
+                // Meta row
                 Row(
                   children: [
-                    const Icon(Icons.place, size: 16, color: AppColors.textSecondary),
+                    const Icon(Icons.place,
+                        size: 15, color: AppColors.textSecondary),
                     const SizedBox(width: 4),
-                    Text(
-                      _formatBodyArea(plan.bodyArea),
-                      style: const TextStyle(color: AppColors.textSecondary),
-                    ),
+                    Text(_formatArea(plan.bodyArea),
+                        style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 13)),
                     const SizedBox(width: 16),
-                    const Icon(Icons.bar_chart, size: 16, color: AppColors.textSecondary),
+                    const Icon(Icons.bar_chart,
+                        size: 15, color: AppColors.textSecondary),
                     const SizedBox(width: 4),
-                    Text(
-                      'Severity: ${plan.painSeverity}/10',
-                      style: const TextStyle(color: AppColors.textSecondary),
-                    ),
+                    Text('Pain ${plan.painSeverity}/10',
+                        style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 13)),
                   ],
                 ),
 
-                const SizedBox(height: 12),
-                const Text(
-                  'Recommended exercises for you:',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '${plan.exerciseIds.length} exercise${plan.exerciseIds.length == 1 ? '' : 's'} recommended',
-                  style: const TextStyle(color: AppColors.textSecondary),
-                ),
+                const SizedBox(height: 14),
 
-                // Exercise ID chips (truncated)
-                if (plan.exerciseIds.isNotEmpty) ...[
+                // Exercise list
+                if (exercises.isNotEmpty) ...[
+                  Text(
+                    '${exercises.length} exercise${exercises.length == 1 ? '' : 's'} in this plan:',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w600, fontSize: 13),
+                  ),
                   const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: plan.exerciseIds
-                        .asMap()
-                        .entries
-                        .map(
-                          (entry) => Chip(
-                            label: Text(
-                              'Exercise ${entry.key + 1}',
-                              style: const TextStyle(fontSize: 12),
+                  ...exercises.asMap().entries.map((entry) {
+                    final ex = entry.value;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 22,
+                            height: 22,
+                            decoration: const BoxDecoration(
+                              color: AppColors.surface,
+                              shape: BoxShape.circle,
                             ),
-                            backgroundColor: AppColors.surface,
-                            padding: EdgeInsets.zero,
-                            materialTapTargetSize:
-                                MaterialTapTargetSize.shrinkWrap,
+                            child: Center(
+                              child: Text(
+                                '${entry.key + 1}',
+                                style: const TextStyle(
+                                    color: AppColors.primary,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                            ),
                           ),
-                        )
-                        .toList(),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              ex.title,
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                          ),
+                          if (ex.videoUrl.isNotEmpty)
+                            const Icon(Icons.videocam,
+                                size: 14, color: AppColors.primary),
+                        ],
+                      ),
+                    );
+                  }),
+                ] else ...[
+                  Text(
+                    '${plan.exerciseIds.length} exercise${plan.exerciseIds.length == 1 ? '' : 's'} recommended',
+                    style: const TextStyle(
+                        color: AppColors.textSecondary, fontSize: 13),
                   ),
                 ],
 
                 const SizedBox(height: 16),
 
-                // View Exercises button
+                // Start Plan button
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    icon: const Icon(Icons.fitness_center, size: 18),
-                    label: const Text('View Exercises'),
-                    onPressed: () {
-                      // Pre-set the body-area filter in the exercise provider
-                      // then navigate to the exercise library.
-                      context
-                          .read<ExerciseProvider>()
-                          .setBodyAreaFilter(plan.bodyArea);
-                      Navigator.pushNamed(
-                          context, AppRoutes.exerciseLibrary);
-                    },
+                    icon: const Icon(Icons.play_arrow, size: 20),
+                    label: const Text('Start Plan',
+                        style: TextStyle(fontSize: 15)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding:
+                          const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: () => _startPlan(plan),
                   ),
                 ),
               ],
@@ -344,10 +423,10 @@ class _RecoveryPlanScreenState extends State<RecoveryPlanScreen> {
   }
 
   // ---------------------------------------------------------------------------
-  // Tab 2 — Plan History
+  // Tab 2 — History
   // ---------------------------------------------------------------------------
 
-  Widget _buildPlanHistoryTab(
+  Widget _buildHistoryTab(
       BuildContext context, PlanProvider planProvider) {
     if (planProvider.isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -360,10 +439,8 @@ class _RecoveryPlanScreenState extends State<RecoveryPlanScreen> {
           children: const [
             Icon(Icons.history, size: 72, color: Colors.grey),
             SizedBox(height: 16),
-            Text(
-              'No plan history yet',
-              style: TextStyle(fontSize: 16, color: Colors.grey),
-            ),
+            Text('No plan history yet',
+                style: TextStyle(fontSize: 16, color: Colors.grey)),
             SizedBox(height: 8),
             Text(
               'Generate your first recovery plan to get started.',
@@ -379,8 +456,8 @@ class _RecoveryPlanScreenState extends State<RecoveryPlanScreen> {
       padding: const EdgeInsets.all(16),
       itemCount: planProvider.planHistory.length,
       itemBuilder: (context, index) {
-        final plan = planProvider.planHistory[index];
-        return _buildHistoryCard(context, planProvider, plan);
+        return _buildHistoryCard(
+            context, planProvider, planProvider.planHistory[index]);
       },
     );
   }
@@ -391,74 +468,107 @@ class _RecoveryPlanScreenState extends State<RecoveryPlanScreen> {
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: CircleAvatar(
-          backgroundColor: AppColors.surface,
-          child: const Icon(Icons.healing, color: AppColors.primary),
-        ),
-        title: Text(
-          plan.title,
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-        subtitle: Column(
+      shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 4),
             Row(
               children: [
-                const Icon(Icons.place,
-                    size: 13, color: AppColors.textSecondary),
-                const SizedBox(width: 3),
-                Text(
-                  _formatBodyArea(plan.bodyArea),
-                  style: const TextStyle(
-                      fontSize: 13, color: AppColors.textSecondary),
+                const CircleAvatar(
+                  backgroundColor: AppColors.surface,
+                  child: Icon(Icons.healing, color: AppColors.primary),
                 ),
                 const SizedBox(width: 12),
-                const Icon(Icons.bar_chart,
-                    size: 13, color: AppColors.textSecondary),
-                const SizedBox(width: 3),
-                Text(
-                  'Severity ${plan.painSeverity}/10',
-                  style: const TextStyle(
-                      fontSize: 13, color: AppColors.textSecondary),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        plan.title,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w600, fontSize: 14),
+                      ),
+                      const SizedBox(height: 3),
+                      Row(
+                        children: [
+                          const Icon(Icons.place,
+                              size: 12,
+                              color: AppColors.textSecondary),
+                          const SizedBox(width: 3),
+                          Text(_formatArea(plan.bodyArea),
+                              style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary)),
+                          const SizedBox(width: 10),
+                          const Icon(Icons.bar_chart,
+                              size: 12,
+                              color: AppColors.textSecondary),
+                          const SizedBox(width: 3),
+                          Text('Pain ${plan.painSeverity}/10',
+                              style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary)),
+                          const SizedBox(width: 10),
+                          const Icon(Icons.calendar_today,
+                              size: 12,
+                              color: AppColors.textSecondary),
+                          const SizedBox(width: 3),
+                          Text(dateStr,
+                              style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline,
+                      color: Colors.red, size: 20),
+                  onPressed: () =>
+                      _confirmDelete(context, planProvider, plan.id),
                 ),
               ],
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 10),
             Row(
               children: [
-                const Icon(Icons.calendar_today,
-                    size: 13, color: AppColors.textSecondary),
-                const SizedBox(width: 3),
-                Text(
-                  dateStr,
-                  style: const TextStyle(
-                      fontSize: 13, color: AppColors.textSecondary),
-                ),
-                const SizedBox(width: 12),
-                const Icon(Icons.fitness_center,
-                    size: 13, color: AppColors.textSecondary),
-                const SizedBox(width: 3),
-                Text(
-                  '${plan.exerciseIds.length} exercise${plan.exerciseIds.length == 1 ? '' : 's'}',
-                  style: const TextStyle(
-                      fontSize: 13, color: AppColors.textSecondary),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.play_arrow, size: 18),
+                    label: Text(
+                        '${plan.exerciseIds.length} exercise${plan.exerciseIds.length == 1 ? '' : 's'} — Start'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                      side:
+                          const BorderSide(color: AppColors.primary),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                    ),
+                    onPressed: () => _startPlan(plan),
+                  ),
                 ),
               ],
             ),
           ],
         ),
-        trailing: IconButton(
-          icon: const Icon(Icons.delete, color: Colors.red),
-          tooltip: 'Delete plan',
-          onPressed: () =>
-              _confirmDelete(context, planProvider, plan.id),
-        ),
-        isThreeLine: true,
       ),
     );
+  }
+
+  String _diffLabelFor(int severity) {
+    if (severity >= 7) return 'Easy';
+    if (severity >= 4) return 'Medium';
+    return 'Hard';
+  }
+
+  Color _diffColorFor(int severity) {
+    if (severity >= 7) return Colors.green.shade600;
+    if (severity >= 4) return Colors.orange.shade700;
+    return Colors.red.shade600;
   }
 }
