@@ -86,11 +86,22 @@ class _AdminVideoUploadScreenState extends State<AdminVideoUploadScreen> {
 
       final secureUrl = json['secure_url'] as String;
 
-      // Persist to Firestore
+      // Persist to Firestore — update exercise-level URL and every step
+      final snap = await FirebaseFirestore.instance
+          .collection('exercises')
+          .doc(exercise.id)
+          .get();
+      final rawSteps =
+          (snap.data()?['steps'] as List<dynamic>?) ?? [];
+      final updatedSteps = rawSteps.map((s) {
+        final step = Map<String, dynamic>.from(s as Map);
+        step['videoUrl'] = secureUrl;
+        return step;
+      }).toList();
       await FirebaseFirestore.instance
           .collection('exercises')
           .doc(exercise.id)
-          .update({'videoUrl': secureUrl});
+          .update({'videoUrl': secureUrl, 'steps': updatedSteps});
 
       // Refresh local list
       final idx = _exercises.indexWhere((e) => e.id == exercise.id);
