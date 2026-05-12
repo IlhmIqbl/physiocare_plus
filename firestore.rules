@@ -99,6 +99,16 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // ── therapist_patients ────────────────────────────────────────────────
+    // Used by assignTherapistToPatient and getAssignedPatients
+    match /therapist_patients/{docId} {
+      allow read:  if signedIn() &&
+                      (resource.data.therapistId == me() ||
+                       resource.data.patientId  == me() ||
+                       isAdmin());
+      allow write: if isAdmin();
+    }
+
     // ── notifications ─────────────────────────────────────────────────────
     match /notifications/{notifId} {
       allow read:   if signedIn() && resource.data.userId == me();
