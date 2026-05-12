@@ -26,6 +26,7 @@ class AppRoutes {
   static const String adminAssignTherapist = '/adminAssignTherapist';
   static const String therapistFeedback = '/therapistFeedback';
   static const String sessionComplete = '/sessionComplete';
+  static const String adminVideoUpload = '/adminVideoUpload';
 }
 
 class AppColors {

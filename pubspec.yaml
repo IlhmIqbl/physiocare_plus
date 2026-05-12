@@ -67,6 +67,10 @@ dependencies:
   # Link launching (YouTube videos)
   url_launcher: ^6.3.1
 
+  # Cloudinary video upload
+  http: ^1.2.2
+  crypto: ^3.0.3
+
   # Internationalization
   intl: ^0.19.0
 

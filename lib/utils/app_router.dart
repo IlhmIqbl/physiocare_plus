@@ -23,6 +23,7 @@ import 'package:physiocare/screens/admin/manage_therapists_screen.dart';
 import 'package:physiocare/screens/admin/assign_therapist_screen.dart';
 import 'package:physiocare/screens/patient/therapist_feedback_screen.dart';
 import 'package:physiocare/screens/exercises/session_complete_screen.dart';
+import 'package:physiocare/screens/admin/admin_video_upload_screen.dart';
 
 class AppRouter {
   AppRouter._();
@@ -165,6 +166,12 @@ class AppRouter {
         return MaterialPageRoute(
           settings: settings,
           builder: (_) => const SessionCompleteScreen(),
+        );
+
+      case AppRoutes.adminVideoUpload:
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => const AdminVideoUploadScreen(),
         );
 
       default:

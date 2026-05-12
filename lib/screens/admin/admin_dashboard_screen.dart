@@ -198,15 +198,71 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton.icon(
-                        icon: const Icon(Icons.upload),
-                        label: const Text('Seed Sample Exercises'),
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Re-seed Exercises (7 body areas)'),
                         onPressed: () async {
-                          await ExerciseSeeder.seed();
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Exercises seeded successfully!')),
-                            );
-                            _loadStats();
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (_) => AlertDialog(
+                              title: const Text('Re-seed Exercises'),
+                              content: const Text(
+                                'This will DELETE all existing exercises and '
+                                'replace them with 21 default exercises '
+                                '(Ankle, Elbow, Hip, Knee, Low back, Neck, '
+                                'Shoulder × Easy / Medium / Hard).\n\n'
+                                'Uploaded video URLs will be cleared from '
+                                'exercise records. Continue?',
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () =>
+                                      Navigator.pop(context, false),
+                                  child: const Text('Cancel'),
+                                ),
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.orange,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                  onPressed: () =>
+                                      Navigator.pop(context, true),
+                                  child: const Text('Re-seed'),
+                                ),
+                              ],
+                            ),
+                          );
+                          if (confirm != true || !context.mounted) return;
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (_) => const AlertDialog(
+                              content: Row(
+                                children: [
+                                  CircularProgressIndicator(),
+                                  SizedBox(width: 16),
+                                  Text('Re-seeding…'),
+                                ],
+                              ),
+                            ),
+                          );
+                          try {
+                            await ExerciseSeeder.seed();
+                            if (context.mounted) {
+                              Navigator.of(context).pop();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text(
+                                        '21 exercises seeded across 7 body areas.')),
+                              );
+                              _loadStats();
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              Navigator.of(context).pop();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Error: $e')),
+                              );
+                            }
                           }
                         },
                       ),
@@ -216,62 +272,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       width: double.infinity,
                       child: OutlinedButton.icon(
                         icon: const Icon(Icons.video_library_outlined),
-                        label: const Text('Update Exercise Videos'),
-                        onPressed: () async {
-                          showDialog(
-                            context: context,
-                            barrierDismissible: false,
-                            builder: (_) => const AlertDialog(
-                              content: Row(
-                                children: [
-                                  CircularProgressIndicator(),
-                                  SizedBox(width: 16),
-                                  Text('Updating video URLs…'),
-                                ],
-                              ),
-                            ),
-                          );
-                          try {
-                            final count = await ExerciseSeeder.updateStepVideos();
-                            if (context.mounted) {
-                              Navigator.of(context).pop();
-                              showDialog(
-                                context: context,
-                                builder: (_) => AlertDialog(
-                                  title: const Text('Videos Updated'),
-                                  content: Text(
-                                    count == 0
-                                        ? 'No exercises were updated.\n\nThis usually means exercises have not been seeded yet, or bodyArea/difficulty values do not match expected keys.\n\nTry tapping "Seed Sample Exercises" first, then update videos.'
-                                        : 'Successfully patched $count exercises with Cloudinary video URLs.\n\nOpen any exercise and start a session to see the inline video.',
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.of(context).pop(),
-                                      child: const Text('OK'),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }
-                          } catch (e) {
-                            if (context.mounted) {
-                              Navigator.of(context).pop();
-                              showDialog(
-                                context: context,
-                                builder: (_) => AlertDialog(
-                                  title: const Text('Update Failed'),
-                                  content: Text('Error: $e'),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.of(context).pop(),
-                                      child: const Text('OK'),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }
-                          }
-                        },
+                        label: const Text('Upload Exercise Videos'),
+                        onPressed: () => Navigator.pushNamed(
+                            context, AppRoutes.adminVideoUpload),
                       ),
                     ),
                     const SizedBox(height: 24),
