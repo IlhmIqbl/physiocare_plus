@@ -18,6 +18,7 @@ class ProgressProvider extends ChangeNotifier {
       List.unmodifiable(_progressEntries);
   int get streak => _streak;
   bool get isLoading => _isLoading;
+  String? get userId => _userId;
 
   int get weeklySessionCount {
     final cutoff = DateTime.now().subtract(const Duration(days: 7));

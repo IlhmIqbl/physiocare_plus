@@ -5,6 +5,7 @@ import 'package:physiocare/models/session_model.dart';
 import 'package:physiocare/providers/progress_provider.dart';
 import 'package:physiocare/providers/auth_provider.dart';
 import 'package:physiocare/widgets/video_player_widget.dart';
+import 'package:physiocare/widgets/pain_slider.dart';
 import 'package:physiocare/utils/app_constants.dart';
 
 class ExerciseDetailScreen extends StatefulWidget {
@@ -30,8 +31,51 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
     }
   }
 
+  Future<int?> _askInitialPainLevel() async {
+    double painValue = 5.0;
+    return showDialog<int>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Before you start'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Rate your current pain level:'),
+              const SizedBox(height: 12),
+              PainSlider(
+                value: painValue,
+                onChanged: (v) => setDialogState(() => painValue = v),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => Navigator.pop(ctx, painValue.round()),
+              child: const Text('Start'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _startExercise(ExerciseModel exercise) async {
     if (_isStarting) return;
+
+    final initialPainLevel = await _askInitialPainLevel();
+    if (!mounted || initialPainLevel == null) return;
+
     setState(() => _isStarting = true);
 
     try {
@@ -67,6 +111,7 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
         arguments: {
           'exercise': exercise,
           'sessionId': sessionId,
+          'initialPainLevel': initialPainLevel,
         },
       );
     } catch (e) {

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import 'package:physiocare/models/exercise_model.dart';
+import 'package:physiocare/models/progress_model.dart';
 import 'package:physiocare/providers/progress_provider.dart';
 import 'package:physiocare/widgets/pain_stop_dialog.dart';
 import 'package:physiocare/widgets/exercise_review_dialog.dart';
@@ -21,9 +22,11 @@ class _ExerciseSessionScreenState extends State<ExerciseSessionScreen> {
   late ExerciseModel _exercise;
   late String _sessionId;
   late DateTime _sessionStart;
+  int _initialPainLevel = 5;
 
   int _totalSeconds = 0;
   int _remainingSeconds = 0;
+  bool _isPaused = false;
   Timer? _timer;
 
   VideoPlayerController? _videoController;
@@ -40,6 +43,7 @@ class _ExerciseSessionScreenState extends State<ExerciseSessionScreen> {
           ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
       _exercise = args['exercise'] as ExerciseModel;
       _sessionId = args['sessionId'] as String;
+      _initialPainLevel = (args['initialPainLevel'] as int?) ?? 5;
       _sessionStart = DateTime.now();
       _totalSeconds = _exercise.duration > 0 ? _exercise.duration : 0;
       _remainingSeconds = _totalSeconds;
@@ -96,6 +100,57 @@ class _ExerciseSessionScreenState extends State<ExerciseSessionScreen> {
     });
   }
 
+  void _togglePause() {
+    if (_isPaused) {
+      _videoController?.play();
+      if (_remainingSeconds > 0) _startTimer();
+      setState(() => _isPaused = false);
+    } else {
+      _timer?.cancel();
+      _videoController?.pause();
+      setState(() => _isPaused = true);
+    }
+  }
+
+  Future<void> _onEndSessionPressed() async {
+    _timer?.cancel();
+    _videoController?.pause();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('End Session?'),
+        content: const Text(
+            'Your progress so far will be saved. Are you sure you want to end this session?'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx, false);
+            },
+            child: const Text('Continue'),
+          ),
+          ElevatedButton(
+            style:
+                ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('End Session'),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted) return;
+
+    if (confirmed == true) {
+      await _finishSession(null, null, ended: true);
+    } else {
+      if (!_isPaused) {
+        _videoController?.play();
+        if (_remainingSeconds > 0) _startTimer();
+      }
+    }
+  }
+
   Future<void> _onTimerComplete() async {
     _videoController?.pause();
     final result = await showDialog<ExerciseReviewResult>(
@@ -107,18 +162,51 @@ class _ExerciseSessionScreenState extends State<ExerciseSessionScreen> {
     await _finishSession(result?.painLevel, result?.painNote);
   }
 
-  Future<void> _finishSession(int? painLevel, String? painNote) async {
+  Future<void> _finishSession(int? painLevel, String? painNote,
+      {bool ended = false}) async {
     _timer?.cancel();
     _disposeVideo();
+
     final elapsed = DateTime.now().difference(_sessionStart).inSeconds;
     final progressProvider = context.read<ProgressProvider>();
-    await progressProvider.completeSession(
-      _sessionId,
-      DateTime.now(),
-      _exercise.steps.length,
-      painLevel: painLevel,
-      painNote: painNote,
-    );
+
+    if (ended) {
+      final elapsedSteps = _totalSeconds > 0 && _exercise.steps.isNotEmpty
+          ? ((_totalSeconds - _remainingSeconds) /
+                      _totalSeconds *
+                      _exercise.steps.length)
+                  .round()
+                  .clamp(0, _exercise.steps.length)
+          : 0;
+      await progressProvider.stopSession(
+        sessionId: _sessionId,
+        stepsCompleted: elapsedSteps,
+        totalSteps: _exercise.steps.length,
+        painLevel: painLevel,
+        painNote: painNote,
+      );
+    } else {
+      await progressProvider.completeSession(
+        _sessionId,
+        DateTime.now(),
+        _exercise.steps.length,
+        painLevel: painLevel,
+        painNote: painNote,
+      );
+
+      if (painLevel != null) {
+        await progressProvider.saveProgress(ProgressModel(
+          id: '',
+          userId: progressProvider.userId ?? '',
+          sessionId: _sessionId,
+          painLevelBefore: _initialPainLevel,
+          painLevelAfter: painLevel,
+          notes: painNote,
+          recordedAt: DateTime.now(),
+        ));
+      }
+    }
+
     if (mounted) {
       Navigator.pushReplacementNamed(
         context,
@@ -135,6 +223,7 @@ class _ExerciseSessionScreenState extends State<ExerciseSessionScreen> {
   Future<void> _onPainPressed() async {
     _timer?.cancel();
     _videoController?.pause();
+    setState(() => _isPaused = true);
 
     final progressProvider = context.read<ProgressProvider>();
 
@@ -146,6 +235,7 @@ class _ExerciseSessionScreenState extends State<ExerciseSessionScreen> {
     if (!mounted) return;
 
     if (result == null || !result.shouldStop) {
+      setState(() => _isPaused = false);
       _videoController?.play();
       if (_remainingSeconds > 0) _startTimer();
       return;
@@ -157,6 +247,8 @@ class _ExerciseSessionScreenState extends State<ExerciseSessionScreen> {
             .round()
             .clamp(0, _exercise.steps.length)
         : 0;
+
+    _disposeVideo();
 
     await progressProvider.stopSession(
       sessionId: _sessionId,
@@ -210,134 +302,194 @@ class _ExerciseSessionScreenState extends State<ExerciseSessionScreen> {
         onPressed: _onPainPressed,
         backgroundColor: Colors.red,
         icon: const Icon(Icons.warning_amber_rounded, color: Colors.white),
-        label: const Text("I'm in pain",
-            style: TextStyle(color: Colors.white)),
+        label:
+            const Text("I'm in pain", style: TextStyle(color: Colors.white)),
       ),
       body: Column(
         children: [
-          // ── Video — loads once, loops throughout ──────────────────────
+          // ── Video — fixed at top ──────────────────────────────────────
           _buildVideoSection(),
 
-          // ── Timer ────────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: _totalSeconds == 0
-                ? SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _onTimerComplete,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding:
-                            const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10)),
-                      ),
-                      child: const Text('Finish Exercise',
-                          style: TextStyle(fontSize: 16)),
-                    ),
-                  )
-                : Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment:
-                            MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.timer,
-                                  color: isLow
-                                      ? Colors.red
-                                      : AppColors.primary,
-                                  size: 20),
-                              const SizedBox(width: 6),
-                              const Text(
-                                'Time Remaining',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14),
-                              ),
-                            ],
-                          ),
-                          Text(
-                            _formatTime(_remainingSeconds),
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 24,
-                              color: isLow
-                                  ? Colors.red
-                                  : AppColors.primary,
+          // ── Scrollable content below video ────────────────────────────
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Timer or Finish button
+                  _totalSeconds == 0
+                      ? SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _onTimerComplete,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10)),
                             ),
+                            child: const Text('Finish Exercise',
+                                style: TextStyle(fontSize: 16)),
                           ),
-                        ],
+                        )
+                      : Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment:
+                                  MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      _isPaused
+                                          ? Icons.pause_circle
+                                          : Icons.timer,
+                                      color: isLow
+                                          ? Colors.red
+                                          : AppColors.primary,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      _isPaused
+                                          ? 'Paused'
+                                          : 'Time Remaining',
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 14),
+                                    ),
+                                  ],
+                                ),
+                                Text(
+                                  _formatTime(_remainingSeconds),
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 24,
+                                    color: isLow
+                                        ? Colors.red
+                                        : AppColors.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            LinearProgressIndicator(
+                              value: timerProgress,
+                              backgroundColor: Colors.grey.shade300,
+                              color: isLow ? Colors.red : AppColors.primary,
+                              minHeight: 8,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ],
+                        ),
+
+                  const SizedBox(height: 12),
+
+                  // ── Pause / End Session controls ───────────────────
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _totalSeconds > 0
+                              ? _togglePause
+                              : null,
+                          icon: Icon(_isPaused
+                              ? Icons.play_arrow
+                              : Icons.pause),
+                          label: Text(_isPaused ? 'Resume' : 'Pause'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.primary,
+                            side: const BorderSide(
+                                color: AppColors.primary),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
+                            padding:
+                                const EdgeInsets.symmetric(vertical: 10),
+                          ),
+                        ),
                       ),
-                      const SizedBox(height: 6),
-                      LinearProgressIndicator(
-                        value: timerProgress,
-                        backgroundColor: Colors.grey.shade300,
-                        color:
-                            isLow ? Colors.red : AppColors.primary,
-                        minHeight: 8,
-                        borderRadius: BorderRadius.circular(4),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _onEndSessionPressed,
+                          icon: const Icon(Icons.stop_circle_outlined),
+                          label: const Text('End Session'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.red,
+                            side: const BorderSide(color: Colors.red),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
+                            padding:
+                                const EdgeInsets.symmetric(vertical: 10),
+                          ),
+                        ),
                       ),
                     ],
                   ),
-          ),
 
-          // ── Step instructions (read-only reference) ───────────────
-          Expanded(child: _buildStepsList()),
+                  const SizedBox(height: 20),
+
+                  // ── Steps section ──────────────────────────────────
+                  if (_exercise.steps.isNotEmpty) ...[
+                    const Text(
+                      'Steps',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                    const SizedBox(height: 10),
+                    ..._exercise.steps.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final step = entry.value;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 26,
+                              height: 26,
+                              margin:
+                                  const EdgeInsets.only(top: 2, right: 10),
+                              decoration: const BoxDecoration(
+                                color: AppColors.primary,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '${index + 1}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                step.description,
+                                style: const TextStyle(
+                                    fontSize: 15, height: 1.5),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                  ] else
+                    const Center(
+                      child: Text('No instructions provided.',
+                          style: TextStyle(color: Colors.grey)),
+                    ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
-    );
-  }
-
-  Widget _buildStepsList() {
-    if (_exercise.steps.isEmpty) {
-      return const Center(
-        child: Text('No instructions provided.',
-            style: TextStyle(color: Colors.grey)),
-      );
-    }
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
-      itemCount: _exercise.steps.length,
-      itemBuilder: (context, index) {
-        final step = _exercise.steps[index];
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 24,
-                height: 24,
-                margin: const EdgeInsets.only(top: 2, right: 10),
-                decoration: const BoxDecoration(
-                  color: AppColors.primary,
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Text(
-                    '${index + 1}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-              Expanded(
-                child: Text(
-                  step.description,
-                  style: const TextStyle(fontSize: 15, height: 1.5),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 
