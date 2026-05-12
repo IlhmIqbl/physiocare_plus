@@ -38,11 +38,14 @@ class TherapistService {
     return _db
         .collection('therapist_feedback')
         .where('patientId', isEqualTo: patientId)
-        .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((s) => s.docs
-            .map((d) => TherapistFeedbackModel.fromFirestore(d))
-            .toList());
+        .map((s) {
+          final items = s.docs
+              .map((d) => TherapistFeedbackModel.fromFirestore(d))
+              .toList()
+            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          return items;
+        });
   }
 
   Future<void> addSessionFeedback(TherapistFeedbackModel feedback) async {
@@ -66,10 +69,14 @@ class TherapistService {
     return _db
         .collection('therapist_plans')
         .where('patientId', isEqualTo: patientId)
-        .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((s) =>
-            s.docs.map((d) => TherapistPlanModel.fromFirestore(d)).toList());
+        .map((s) {
+          final plans = s.docs
+              .map((d) => TherapistPlanModel.fromFirestore(d))
+              .toList()
+            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          return plans;
+        });
   }
 
   Future<void> createPlan(TherapistPlanModel plan) async {
@@ -178,9 +185,10 @@ class TherapistService {
     return _db
         .collection('therapist_plans')
         .where('patientId', isEqualTo: patientId)
-        .where('active', isEqualTo: true)
         .snapshots()
-        .map((s) =>
-            s.docs.map((d) => TherapistPlanModel.fromFirestore(d)).toList());
+        .map((s) => s.docs
+            .map((d) => TherapistPlanModel.fromFirestore(d))
+            .where((p) => p.active)
+            .toList());
   }
 }

@@ -46,17 +46,25 @@ class _AddSessionFeedbackScreenState
       final snapshot = await FirebaseFirestore.instance
           .collection('sessions')
           .where('userId', isEqualTo: patientId)
-          .where('completed', isEqualTo: true)
-          .orderBy('startedAt', descending: true)
-          .limit(20)
           .get();
+
+      // Filter and sort in Dart to avoid composite index requirement
+      final completed = snapshot.docs
+          .where((d) => d.data()['completed'] == true)
+          .toList()
+        ..sort((a, b) {
+          final ta = a.data()['startedAt'] as Timestamp?;
+          final tb = b.data()['startedAt'] as Timestamp?;
+          if (ta == null) return 1;
+          if (tb == null) return -1;
+          return tb.compareTo(ta);
+        });
+
       setState(() {
-        _sessions = snapshot.docs
-            .map((d) => {
-                  'id': d.id,
-                  'title': (d.data()['exerciseTitle'] as String?) ?? d.id,
-                })
-            .toList();
+        _sessions = completed.take(20).map((d) => {
+              'id': d.id,
+              'title': (d.data()['exerciseTitle'] as String?) ?? d.id,
+            }).toList();
         _loadingSessions = false;
       });
     } catch (e) {
