@@ -90,30 +90,42 @@ class ProgressService {
         .where('completed', isEqualTo: true)
         .orderBy('completedAt', descending: true)
         .get();
-
     if (snapshot.docs.isEmpty) return 0;
-
-    // Collect unique dates with completed sessions
-    final completedDates = <DateTime>{};
+    final dates = <DateTime>{};
     for (final doc in snapshot.docs) {
-      final session = SessionModel.fromFirestore(doc);
-      if (session.completedAt != null) {
-        final d = session.completedAt!;
-        completedDates.add(DateTime(d.year, d.month, d.day));
+      final s = SessionModel.fromFirestore(doc);
+      if (s.completedAt != null) {
+        final d = s.completedAt!;
+        dates.add(DateTime(d.year, d.month, d.day));
       }
     }
-
     final today = DateTime.now();
-    final todayDate = DateTime(today.year, today.month, today.day);
-
+    var check = DateTime(today.year, today.month, today.day);
     int streak = 0;
-    DateTime check = todayDate;
-
-    while (completedDates.contains(check)) {
+    while (dates.contains(check)) {
       streak++;
       check = check.subtract(const Duration(days: 1));
     }
-
     return streak;
+  }
+
+  // Real-time streams — used by ProgressProvider for live updates.
+
+  Stream<List<SessionModel>> watchUserSessions(String userId) {
+    return _db
+        .collection('sessions')
+        .where('userId', isEqualTo: userId)
+        .orderBy('startedAt', descending: true)
+        .snapshots()
+        .map((s) => s.docs.map(SessionModel.fromFirestore).toList());
+  }
+
+  Stream<List<ProgressModel>> watchUserProgress(String userId) {
+    return _db
+        .collection('progress')
+        .where('userId', isEqualTo: userId)
+        .orderBy('recordedAt', descending: true)
+        .snapshots()
+        .map((s) => s.docs.map(ProgressModel.fromFirestore).toList());
   }
 }

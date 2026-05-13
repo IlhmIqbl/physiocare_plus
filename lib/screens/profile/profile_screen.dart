@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import 'package:physiocare/providers/auth_provider.dart';
+import 'package:physiocare/providers/progress_provider.dart';
 import 'package:physiocare/services/firestore_service.dart';
 import 'package:physiocare/utils/app_constants.dart';
 import 'package:physiocare/widgets/pain_slider.dart';
@@ -416,7 +417,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 // ---- Sign Out button ----
                 OutlinedButton.icon(
                   onPressed: () async {
-                    await context.read<AppAuthProvider>().signOut();
+                    final progress = context.read<ProgressProvider>();
+                    final auth = context.read<AppAuthProvider>();
+                    await progress.clearProgress();
+                    await auth.signOut();
                     if (context.mounted) {
                       Navigator.of(context)
                           .pushNamedAndRemoveUntil(AppRoutes.login, (_) => false);

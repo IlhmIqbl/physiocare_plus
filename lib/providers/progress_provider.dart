@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:physiocare/models/session_model.dart';
 import 'package:physiocare/models/progress_model.dart';
@@ -10,6 +11,12 @@ class ProgressProvider extends ChangeNotifier {
   int _streak = 0;
   bool _isLoading = false;
   String? _userId;
+
+  // Stream subscriptions — kept alive as long as the user is logged in.
+  StreamSubscription<List<SessionModel>>? _sessionsSub;
+  StreamSubscription<List<ProgressModel>>? _progressSub;
+  bool _sessionsReady = false;
+  bool _progressReady = false;
 
   final _progressService = ProgressService();
 
@@ -29,37 +36,101 @@ class ProgressProvider extends ChangeNotifier {
 
   double get avgPainReduction {
     if (_progressEntries.isEmpty) return 0.0;
-    final total = _progressEntries.fold<double>(
-      0.0,
-      (sum, p) => sum + (p.painLevelBefore - p.painLevelAfter),
-    );
-    return total / _progressEntries.length;
+    final valid = _progressEntries
+        .where((p) => p.painLevelBefore > 0 || p.painLevelAfter > 0)
+        .toList();
+    if (valid.isEmpty) return 0.0;
+    final total = valid.fold<double>(
+        0.0, (sum, p) => sum + (p.painLevelBefore - p.painLevelAfter));
+    return total / valid.length;
   }
 
+  // Subscribes to live Firestore streams for this user.
+  // Safe to call multiple times — re-subscribes only when userId changes.
   Future<void> loadUserProgress(String userId) async {
+    if (_userId == userId && _sessionsSub != null) return;
+
     _userId = userId;
     _isLoading = true;
+    _sessionsReady = false;
+    _progressReady = false;
     notifyListeners();
 
-    try {
-      _sessions = await _progressService.getUserSessions(userId);
-      _progressEntries = await _progressService.getUserProgress(userId);
-      _streak = await _progressService.getSessionStreak(userId);
-    } catch (_) {
-      _sessions = [];
-      _progressEntries = [];
-      _streak = 0;
-    } finally {
-      _isLoading = false;
+    await _sessionsSub?.cancel();
+    await _progressSub?.cancel();
+
+    _sessionsSub =
+        _progressService.watchUserSessions(userId).listen((sessions) {
+      _sessions = sessions;
+      _recalculateStreak();
+      if (!_sessionsReady) {
+        _sessionsReady = true;
+        if (_progressReady) _isLoading = false;
+      }
       notifyListeners();
+    }, onError: (_) {
+      if (!_sessionsReady) {
+        _sessionsReady = true;
+        if (_progressReady) _isLoading = false;
+        notifyListeners();
+      }
+    });
+
+    _progressSub =
+        _progressService.watchUserProgress(userId).listen((entries) {
+      _progressEntries = entries;
+      if (!_progressReady) {
+        _progressReady = true;
+        if (_sessionsReady) _isLoading = false;
+      }
+      notifyListeners();
+    }, onError: (_) {
+      if (!_progressReady) {
+        _progressReady = true;
+        if (_sessionsReady) _isLoading = false;
+        notifyListeners();
+      }
+    });
+  }
+
+  // Recalculates streak from in-memory session list — no extra network call.
+  void _recalculateStreak() {
+    final dates = <DateTime>{};
+    for (final s in _sessions) {
+      if (s.completed && s.completedAt != null) {
+        final d = s.completedAt!;
+        dates.add(DateTime(d.year, d.month, d.day));
+      }
     }
+    final today = DateTime.now();
+    var check = DateTime(today.year, today.month, today.day);
+    int streak = 0;
+    while (dates.contains(check)) {
+      streak++;
+      check = check.subtract(const Duration(days: 1));
+    }
+    _streak = streak;
+  }
+
+  // Cancels active subscriptions (call when the user logs out).
+  Future<void> clearProgress() async {
+    await _sessionsSub?.cancel();
+    await _progressSub?.cancel();
+    _sessionsSub = null;
+    _progressSub = null;
+    _sessions = [];
+    _progressEntries = [];
+    _streak = 0;
+    _userId = null;
+    _isLoading = false;
+    _sessionsReady = false;
+    _progressReady = false;
+    notifyListeners();
   }
 
   Future<String> startSession(SessionModel session) async {
     final id = await _progressService.startSession(session);
-    final saved = session.copyWith(id: id);
-    _sessions = [saved, ..._sessions];
-    notifyListeners();
+    // Stream will pick up the new doc automatically.
     return id;
   }
 
@@ -69,8 +140,12 @@ class ProgressProvider extends ChangeNotifier {
     await _progressService.completeSession(
         sessionId, completedAt, totalSteps,
         painLevel: painLevel, painNote: painNote);
+
+    // Optimistic local update so the UI reacts immediately while the
+    // Firestore stream delivers the confirmed update.
     final index = _sessions.indexWhere((s) => s.id == sessionId);
     if (index != -1) {
+      _sessions = List.of(_sessions);
       _sessions[index] = _sessions[index].copyWith(
         completed: true,
         completedAt: completedAt,
@@ -79,8 +154,9 @@ class ProgressProvider extends ChangeNotifier {
         totalSteps: totalSteps,
         completionPercent: 100.0,
       );
+      _recalculateStreak();
+      notifyListeners();
     }
-    notifyListeners();
 
     if (_userId != null) {
       final ns = NotificationService();
@@ -103,12 +179,20 @@ class ProgressProvider extends ChangeNotifier {
       painLevel: painLevel,
       painNote: painNote,
     );
-    notifyListeners();
+    // Stream will deliver the updated document automatically.
   }
 
   Future<void> saveProgress(ProgressModel progress) async {
     await _progressService.saveProgress(progress);
+    // Optimistic local update; stream will confirm shortly.
     _progressEntries = [progress, ..._progressEntries];
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _sessionsSub?.cancel();
+    _progressSub?.cancel();
+    super.dispose();
   }
 }

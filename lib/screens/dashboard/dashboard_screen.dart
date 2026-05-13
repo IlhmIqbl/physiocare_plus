@@ -429,7 +429,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             title: const Text('Logout', style: TextStyle(color: Colors.red)),
             onTap: () async {
               Navigator.pop(context);
-              await context.read<AppAuthProvider>().signOut();
+              final progress = context.read<ProgressProvider>();
+              final auth = context.read<AppAuthProvider>();
+              await progress.clearProgress();
+              await auth.signOut();
               if (mounted) {
                 Navigator.pushReplacementNamed(context, AppRoutes.login);
               }

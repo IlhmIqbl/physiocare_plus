@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:physiocare/models/session_model.dart';
 import 'package:physiocare/providers/auth_provider.dart';
 import 'package:physiocare/providers/progress_provider.dart';
 import 'package:physiocare/providers/subscription_provider.dart';
@@ -19,11 +21,9 @@ class _ProgressScreenState extends State<ProgressScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final authProvider = context.read<AppAuthProvider>();
-      final uid = authProvider.userModel?.id ?? '';
+      final uid = context.read<AppAuthProvider>().userModel?.id ?? '';
       if (uid.isNotEmpty) {
-        final progressProvider = context.read<ProgressProvider>();
-        progressProvider.loadUserProgress(uid);
+        context.read<ProgressProvider>().loadUserProgress(uid);
       }
     });
   }
@@ -37,6 +37,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
       appBar: AppBar(
         title: const Text('My Progress'),
         backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
       ),
       body: progressProvider.isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -51,7 +52,9 @@ class _ProgressScreenState extends State<ProgressScreen> {
 
                   // Quick stats row
                   _buildQuickStats(
-                    totalSessions: progressProvider.sessions.length,
+                    totalSessions: progressProvider.sessions
+                        .where((s) => s.completed)
+                        .length,
                     weeklyCount: progressProvider.weeklySessionCount,
                     avgPainReduction: progressProvider.avgPainReduction,
                   ),
@@ -60,15 +63,16 @@ class _ProgressScreenState extends State<ProgressScreen> {
                   // Pain Trend chart
                   const Text(
                     'Pain Trend',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                   const SizedBox(height: 8),
                   PainTrendChart(
                     progressEntries: progressProvider.progressEntries,
                   ),
+                  const SizedBox(height: 20),
+
+                  // Recent sessions
+                  _buildRecentSessions(progressProvider.sessions),
                   const SizedBox(height: 20),
 
                   // Premium section
@@ -80,9 +84,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
                         const Text(
                           'Weekly Sessions',
                           style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
+                              fontWeight: FontWeight.bold, fontSize: 16),
                         ),
                         const SizedBox(height: 8),
                         WeeklySessionsChart(
@@ -92,9 +94,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
                         const Text(
                           'Advanced Analytics',
                           style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
+                              fontWeight: FontWeight.bold, fontSize: 16),
                         ),
                         const SizedBox(height: 8),
                         _buildAdvancedAnalytics(progressProvider),
@@ -123,11 +123,8 @@ class _ProgressScreenState extends State<ProgressScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
         child: Row(
           children: [
-            const Icon(
-              Icons.local_fire_department,
-              color: Colors.orange,
-              size: 32,
-            ),
+            const Icon(Icons.local_fire_department,
+                color: Colors.orange, size: 32),
             const SizedBox(width: 12),
             Text(
               '$streak Day Streak',
@@ -138,9 +135,9 @@ class _ProgressScreenState extends State<ProgressScreen> {
               ),
             ),
             const Spacer(),
-            const Text(
-              'Keep going!',
-              style: TextStyle(color: Colors.white70, fontSize: 14),
+            Text(
+              streak == 0 ? 'Start today!' : 'Keep going!',
+              style: const TextStyle(color: Colors.white70, fontSize: 14),
             ),
           ],
         ),
@@ -157,7 +154,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
       children: [
         Expanded(
           child: _buildStatTile(
-            label: 'Total Sessions',
+            label: 'Total\nSessions',
             value: '$totalSessions',
             icon: Icons.fitness_center,
           ),
@@ -174,8 +171,11 @@ class _ProgressScreenState extends State<ProgressScreen> {
         Expanded(
           child: _buildStatTile(
             label: 'Avg Pain\nReduction',
-            value: avgPainReduction.toStringAsFixed(1),
+            value: avgPainReduction > 0
+                ? '+${avgPainReduction.toStringAsFixed(1)}'
+                : avgPainReduction.toStringAsFixed(1),
             icon: Icons.trending_down,
+            valueColor: avgPainReduction > 0 ? Colors.green : null,
           ),
         ),
       ],
@@ -186,6 +186,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
     required String label,
     required String value,
     required IconData icon,
+    Color? valueColor,
   }) {
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -198,18 +199,16 @@ class _ProgressScreenState extends State<ProgressScreen> {
             const SizedBox(height: 6),
             Text(
               value,
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 20,
+                color: valueColor,
               ),
             ),
             const SizedBox(height: 4),
             Text(
               label,
-              style: const TextStyle(
-                color: Colors.grey,
-                fontSize: 11,
-              ),
+              style: const TextStyle(color: Colors.grey, fontSize: 11),
               textAlign: TextAlign.center,
             ),
           ],
@@ -218,32 +217,133 @@ class _ProgressScreenState extends State<ProgressScreen> {
     );
   }
 
+  Widget _buildRecentSessions(List<SessionModel> sessions) {
+    // Show last 5 sessions (any status), newest first.
+    final recent = sessions.take(5).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Recent Activity',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        const SizedBox(height: 8),
+        if (recent.isEmpty)
+          const Card(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(
+                child: Text(
+                  'No sessions yet — complete an exercise to see activity here.',
+                  style: TextStyle(color: Colors.grey, fontSize: 13),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+          )
+        else
+          Card(
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
+            child: Column(
+              children: recent.asMap().entries.map((entry) {
+                final i = entry.key;
+                final s = entry.value;
+                return Column(
+                  children: [
+                    _buildSessionTile(s),
+                    if (i < recent.length - 1)
+                      const Divider(height: 1, indent: 56),
+                  ],
+                );
+              }).toList(),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildSessionTile(SessionModel s) {
+    final fmt = DateFormat('d MMM, h:mm a');
+    final date = s.completedAt ?? s.startedAt;
+
+    Color statusColor;
+    IconData statusIcon;
+    String statusLabel;
+    switch (s.status) {
+      case 'completed':
+        statusColor = Colors.green;
+        statusIcon = Icons.check_circle;
+        statusLabel = 'Completed';
+        break;
+      case 'stopped':
+        statusColor = Colors.orange;
+        statusIcon = Icons.stop_circle_outlined;
+        statusLabel =
+            '${s.completionPercent.toStringAsFixed(0)}% done';
+        break;
+      default:
+        statusColor = Colors.grey;
+        statusIcon = Icons.hourglass_top;
+        statusLabel = 'In progress';
+    }
+
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundColor: statusColor.withValues(alpha: 0.12),
+        child: Icon(statusIcon, color: statusColor, size: 20),
+      ),
+      title: Text(
+        s.exerciseTitle,
+        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      subtitle: Text(
+        fmt.format(date),
+        style: const TextStyle(fontSize: 12, color: Colors.grey),
+      ),
+      trailing: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: statusColor.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: statusColor.withValues(alpha: 0.4)),
+        ),
+        child: Text(
+          statusLabel,
+          style: TextStyle(
+              fontSize: 11,
+              color: statusColor,
+              fontWeight: FontWeight.w600),
+        ),
+      ),
+    );
+  }
+
   Widget _buildAdvancedAnalytics(ProgressProvider progressProvider) {
     final sessions = progressProvider.sessions;
     final entries = progressProvider.progressEntries;
-
-    // Best streak — already available as current streak; compute max from sessions
     final streak = progressProvider.streak;
 
-    // Total exercise time in minutes
-    final totalSeconds = sessions.fold<int>(
-      0,
-      (sum, s) => sum + s.durationSeconds,
-    );
+    final totalSeconds = sessions
+        .where((s) => s.completed)
+        .fold<int>(0, (sum, s) => sum + s.durationSeconds);
     final totalMinutes = totalSeconds ~/ 60;
 
-    // Most common exercise (body area proxy via exerciseTitle)
     String mostCommon = 'N/A';
     if (sessions.isNotEmpty) {
       final freq = <String, int>{};
-      for (final s in sessions) {
+      for (final s in sessions.where((s) => s.completed)) {
         freq[s.exerciseTitle] = (freq[s.exerciseTitle] ?? 0) + 1;
       }
-      mostCommon = freq.entries
-          .reduce((a, b) => a.value >= b.value ? a : b)
-          .key;
-      if (mostCommon.length > 20) {
-        mostCommon = '${mostCommon.substring(0, 18)}…';
+      if (freq.isNotEmpty) {
+        mostCommon =
+            freq.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+        if (mostCommon.length > 20) {
+          mostCommon = '${mostCommon.substring(0, 18)}…';
+        }
       }
     }
 
@@ -264,7 +364,9 @@ class _ProgressScreenState extends State<ProgressScreen> {
               icon: Icons.timer,
               iconColor: AppColors.primary,
               label: 'Total Exercise Time',
-              value: '$totalMinutes min',
+              value: totalMinutes >= 60
+                  ? '${totalMinutes ~/ 60}h ${totalMinutes % 60}m'
+                  : '$totalMinutes min',
             ),
             const Divider(height: 20),
             _buildAnalyticsRow(
@@ -290,17 +392,12 @@ class _ProgressScreenState extends State<ProgressScreen> {
         Icon(icon, color: iconColor, size: 24),
         const SizedBox(width: 12),
         Expanded(
-          child: Text(
-            label,
-            style: const TextStyle(color: Colors.grey, fontSize: 14),
-          ),
+          child: Text(label,
+              style: const TextStyle(color: Colors.grey, fontSize: 14)),
         ),
         Text(
           value,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
         ),
       ],
     );
