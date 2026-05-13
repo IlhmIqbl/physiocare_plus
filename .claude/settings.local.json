@@ -26,7 +26,21 @@
       "Bash(Write-Output \"Directory created\")",
       "Bash(flutter --version)",
       "Bash(git *)",
-      "Skill(commit-commands:commit)"
+      "Skill(commit-commands:commit)",
+      "WebSearch",
+      "Bash(C:\\\\Users\\\\User\\\\.claude\\\\plugins\\\\cache\\\\claude-plugins-official\\\\superpowers\\\\5.1.0\\\\scripts\\\\start-server.sh *)",
+      "Bash(not exist *)",
+      "Bash(dart analyze *)",
+      "Bash(flutter build *)",
+      "Bash(python -c \"import hashlib, time, requests; print\\('OK'\\)\")",
+      "Bash(curl --version)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} %{size_download} %{url_effective}\\\\n\" --head \"https://upload.wikimedia.org/wikipedia/commons/2/2a/Low_Back_Pain.webm\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} %{size_download} %{url_effective}\\\\n\" --head \"https://upload.wikimedia.org/wikipedia/commons/8/8e/Knee_Push_Sweep.webm\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} %{size_download} %{url_effective}\\\\n\" --head \"https://upload.wikimedia.org/wikipedia/commons/5/53/Kettlebell_Swing_Hip_Hinge_Style.webm\")",
+      "Bash(curl -s \"https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrnamespace=6&gsrsearch=filetype:video+neck+exercise&gsrlimit=10&prop=videoinfo&viprop=url|size&format=json\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(p['title'], '\\\\n', p.get\\('videoinfo',[{}]\\)[0].get\\('url','N/A'\\), '\\\\n'\\) for p in d.get\\('query',{}\\).get\\('pages',{}\\).values\\(\\)]\")",
+      "Bash(curl -s 'https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrnamespace=6&gsrsearch=filetype:video+__TRACKED_VAR__&gsrlimit=5&prop=videoinfo&viprop=url|size&format=json')",
+      "Bash(curl -s 'https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrnamespace=6&gsrsearch=filetype:video+__TRACKED_VAR__&gsrlimit=3&prop=videoinfo&viprop=url|size&format=json')"
     ]
   }
 }

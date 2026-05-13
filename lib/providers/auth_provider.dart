@@ -91,7 +91,8 @@ class AppAuthProvider extends ChangeNotifier {
     _error = null;
     notifyListeners();
     try {
-      await _authService.signInWithEmailPassword(email, password);
+      final credential = await _authService.signInWithEmailPassword(email, password);
+      _userModel = await _authService.getUserModel(credential.user!.uid);
       _isLoading = false;
       notifyListeners();
       return true;
@@ -132,6 +133,9 @@ class AppAuthProvider extends ChangeNotifier {
     notifyListeners();
     try {
       final credential = await _authService.signInWithGoogle();
+      if (credential?.user != null) {
+        _userModel = await _authService.getUserModel(credential!.user!.uid);
+      }
       _isLoading = false;
       notifyListeners();
       return credential != null;

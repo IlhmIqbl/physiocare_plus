@@ -62,7 +62,12 @@ class _LoginScreenState extends State<LoginScreen> {
       final navigator = Navigator.of(context);
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('onboarding_complete', true);
-      navigator.pushReplacementNamed(AppRoutes.dashboard);
+      final userType = provider.userModel?.userType ?? 'freemium';
+      if (userType == 'therapist') {
+        navigator.pushReplacementNamed(AppRoutes.therapistDashboard);
+      } else {
+        navigator.pushReplacementNamed(AppRoutes.dashboard);
+      }
     }
   }
 
@@ -73,7 +78,12 @@ class _LoginScreenState extends State<LoginScreen> {
       final navigator = Navigator.of(context);
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('onboarding_complete', true);
-      navigator.pushReplacementNamed(AppRoutes.dashboard);
+      final userType = provider.userModel?.userType ?? 'freemium';
+      if (userType == 'therapist') {
+        navigator.pushReplacementNamed(AppRoutes.therapistDashboard);
+      } else {
+        navigator.pushReplacementNamed(AppRoutes.dashboard);
+      }
     }
   }
 
