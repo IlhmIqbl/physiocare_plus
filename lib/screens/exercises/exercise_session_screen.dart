@@ -372,64 +372,40 @@ class _ExerciseSessionScreenState extends State<ExerciseSessionScreen> {
               ),
             ),
 
-          // ── Scrollable steps — same layout as detail screen ──────────────
+          // ── Scrollable steps — identical to detail screen ────────────────
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 100),
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 120),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (_exercise.steps.isNotEmpty) ...[
-                    const Text(
-                      'Steps',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 16),
-                    ),
-                    const SizedBox(height: 10),
-                    ..._exercise.steps.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final step = entry.value;
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              width: 28,
-                              height: 28,
-                              margin: const EdgeInsets.only(top: 1, right: 10),
-                              decoration: const BoxDecoration(
-                                color: AppColors.primary,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Center(
-                                child: Text(
-                                  '${index + 1}',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: Text(
-                                step.description,
-                                style: const TextStyle(
-                                    fontSize: 15, height: 1.5),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }),
-                  ] else
-                    const Center(
-                      child: Text(
-                        'No instructions provided.',
-                        style: TextStyle(color: Colors.grey),
-                      ),
+                  Text(
+                    _exercise.steps.isEmpty
+                        ? 'No instructions provided.'
+                        : 'Steps (${_exercise.steps.length})',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  const SizedBox(height: 8),
+                  if (_exercise.steps.isNotEmpty)
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _exercise.steps.length,
+                      itemBuilder: (context, index) {
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: CircleAvatar(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            child: Text('${index + 1}'),
+                          ),
+                          title: Text(
+                            _exercise.steps[index].description,
+                            style: const TextStyle(fontSize: 15, height: 1.5),
+                          ),
+                        );
+                      },
                     ),
                 ],
               ),
