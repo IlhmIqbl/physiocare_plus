@@ -362,7 +362,7 @@ class _PlansTab extends StatelessWidget {
                 padding:
                     const EdgeInsets.fromLTRB(16, 16, 16, 88),
                 itemCount: provider.plans.length,
-                separatorBuilder: (_, __) =>
+                separatorBuilder: (_, index) =>
                     const SizedBox(height: 4),
                 itemBuilder: (context, i) {
                   final plan = provider.plans[i];
@@ -509,7 +509,7 @@ class _FeedbackTab extends StatelessWidget {
                 padding:
                     const EdgeInsets.fromLTRB(16, 16, 16, 88),
                 itemCount: provider.feedback.length,
-                separatorBuilder: (_, __) =>
+                separatorBuilder: (_, index) =>
                     const SizedBox(height: 4),
                 itemBuilder: (context, i) {
                   final item = provider.feedback[i];
